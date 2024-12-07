@@ -1,5 +1,6 @@
 streamlit
-opencv-python
 ultralytics
 easyocr
+matplotlib
 Pillow
+numpy
