@@ -1,7 +1,5 @@
 streamlit
-ultralytics
 opencv-python
-Pillow
+ultralytics
 easyocr
-torch
-numpy
+Pillow
