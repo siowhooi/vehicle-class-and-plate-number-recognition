@@ -1,92 +1,104 @@
 import streamlit as st
 from ultralytics import YOLO
 import easyocr
-import cv2
 import matplotlib.pyplot as plt
+import io
+from PIL import Image
+import numpy as np
 from datetime import datetime
 
-# Load the YOLO model
-model = YOLO(r"best.pt")
+# Load YOLO model
+model = YOLO(r"C:\Users\wohen\PycharmProjects\test\runs\detect\train\weights\best.pt")
 
-# Initialize EasyOCR reader for license plate recognition
+# Initialize EasyOCR reader
 reader = easyocr.Reader(['en'])
 
-# Dropdown menu for selecting location
-locations = ['Gombak Toll Plaza', 'Jalan Duta, Kuala Lumpur', 'Seremban, Negeri Sembilan', 'Juru, Penang']
-location = st.selectbox("Select Toll Location", locations)
+# Toll Plaza locations
+locations = [
+    "Gombak Toll Plaza",
+    "Jalan Duta, Kuala Lumpur",
+    "Seremban, Negeri Sembilan",
+    "Juru, Penang"
+]
 
-# Upload or capture image
-image_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
-
-if st.button("Capture Image via Camera"):
-    # Code for opening webcam to capture image goes here (if applicable)
-
-    # Placeholder for webcam capture (as webcam implementation may need extra configuration)
-    st.write("Webcam capture functionality can be implemented here.")
-
-if image_file is not None:
-    # Convert uploaded image to OpenCV format
-    image_bytes = image_file.read()
-    image_array = np.asarray(bytearray(image_bytes), dtype=np.uint8)
-    image = cv2.imdecode(image_array, 1)
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
+# Function to recognize plate and vehicle class
+def detect_vehicle_and_plate(image):
     # Run inference on the image
     results = model(image)
 
-    # Display image with YOLO detections and bounding boxes for each detected object
+    # Prepare the image for display
+    image_rgb = np.array(image.convert('RGB'))
+
+    plate_number = ""
+    vehicle_class = ""
+
+    # Process the detected objects
     for result in results[0].boxes:
         class_id = int(result.cls)
         class_name = model.names[class_id]
 
-        # Get bounding box coordinates
+        # Get the bounding box coordinates
         x1, y1, x2, y2 = map(int, result.xyxy[0])
 
-        # Draw the bounding box on the image for detected objects
-        color = (0, 255, 0) if class_name != 'license_plate' else (255, 0, 0)
-        cv2.rectangle(image_rgb, (x1, y1), (x2, y2), color, 2)
-        cv2.putText(image_rgb, class_name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-
-    # Show the image with detections
-    st.image(image_rgb, caption="Detected Image", use_column_width=True)
-
-    # Process detected license plates and perform OCR
-    plate_text = ""
-    for result in results[0].boxes:
-        class_id = int(result.cls)
-        class_name = model.names[class_id]
-
-        if class_name in ['license_plate', 'license_plate_taxi']:
-            x1, y1, x2, y2 = map(int, result.xyxy[0])
+        # Detect vehicle class and license plate
+        if class_name == "license_plate" or class_name == "license_plate_taxi":
+            # Crop the license plate from the image
             plate_image = image_rgb[y1:y2, x1:x2]
-
-            # Use EasyOCR to recognize text from the plate
             plate_text = reader.readtext(plate_image, detail=0)
+            plate_number = ''.join(plate_text)
+            
+            # Draw bounding box for license plate on the image
+            plt.imshow(plate_image)
+            plt.axis('off')
+            st.pyplot()
 
-            # Draw bounding box around OCR text
-            for (bbox, text, _) in reader.readtext(plate_image):
-                (top_left, top_right, bottom_right, bottom_left) = bbox
-                top_left = tuple(map(int, top_left))
-                bottom_right = tuple(map(int, bottom_right))
-                cv2.rectangle(plate_image, top_left, bottom_right, (0, 255, 0), 2)
+        vehicle_class = class_name
 
-            # Display cropped plate image
-            st.image(plate_image, caption="License Plate Detected", use_column_width=True)
+    return vehicle_class, plate_number, image_rgb
 
-            # Show recognized plate number
-            st.write(f"Recognized Plate Number: {''.join(plate_text)}")
+# Layout for the Streamlit app
+st.title("Tolling System with Vehicle and Plate Recognition")
 
-    # Display result table on the right side
-    if plate_text:
-        # Sample toll fares (can be replaced by actual logic based on the location)
-        toll_fare = 10.0 if location == 'Gombak Toll Plaza' else 15.0  # Example value
-        data = {
-            "Datetime": [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
-            "Vehicle Class": [class_name],
-            "Plate Number": [''.join(plate_text)],
-            "Toll": [location],
-            "Mode": ['Manual' if image_file else 'Camera'],
-            "Toll Fare (RM)": [toll_fare]
-        }
+# Left column (for location selection, image upload, or camera)
+col1, col2 = st.columns(2)
 
-        st.table(data)
+with col1:
+    location = st.selectbox("Choose Toll Plaza Location", locations)
+
+    uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        vehicle_class, plate_number, result_image = detect_vehicle_and_plate(image)
+
+        st.image(result_image, caption="Processed Image", use_column_width=True)
+
+        st.write(f"Location: {location}")
+        st.write(f"Datetime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        st.write(f"Vehicle Class: {vehicle_class}")
+        st.write(f"Plate Number: {plate_number}")
+        st.write(f"Toll: {location}")
+        st.write("Mode: Upload Image")
+        st.write(f"Toll Fare (RM): {calculate_toll_fare(location)}")
+
+with col2:
+    st.subheader("Result Table")
+    if uploaded_file:
+        st.write(
+            f"""
+            | Datetime            | Vehicle Class | Plate Number | Toll         | Mode       | Toll Fare (RM) |
+            |---------------------|---------------|--------------|--------------|------------|----------------|
+            | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | {vehicle_class} | {plate_number}  | {location}   | Upload Image | {calculate_toll_fare(location)} |
+            """
+        )
+
+# Function to calculate toll fare based on location
+def calculate_toll_fare(location):
+    toll_fares = {
+        "Gombak Toll Plaza": 5.00,
+        "Jalan Duta, Kuala Lumpur": 7.00,
+        "Seremban, Negeri Sembilan": 4.50,
+        "Juru, Penang": 6.00
+    }
+    return toll_fares.get(location, 0.00)
+
