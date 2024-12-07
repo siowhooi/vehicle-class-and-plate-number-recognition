@@ -1,7 +1,6 @@
 streamlit
-ultralytics
+opencv-python
 easyocr
 matplotlib
+ultralytics
 Pillow
-numpy
-opencv-python-headless
