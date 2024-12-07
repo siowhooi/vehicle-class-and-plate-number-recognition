@@ -1,6 +1,7 @@
-streamlit
-opencv-python
-easyocr
-matplotlib
-ultralytics
-Pillow
+streamlit==1.17.0
+opencv-python-headless==4.8.0.74
+ultralytics==8.0.91
+easyocr==1.6.0
+matplotlib==3.7.1
+numpy==1.24.2
+Pillow==9.5.0
