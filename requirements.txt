@@ -4,3 +4,4 @@ easyocr
 matplotlib
 Pillow
 numpy
+opencv-python-headless
