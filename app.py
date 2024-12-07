@@ -3,84 +3,117 @@ from ultralytics import YOLO
 import easyocr
 import cv2
 import numpy as np
-from PIL import Image
+from datetime import datetime
 
-# Load YOLO model
-model = YOLO("model/best.pt")
-
-# Initialize EasyOCR reader
+# Load YOLO model and EasyOCR
+model = YOLO(r"best.pt")
 reader = easyocr.Reader(['en'])
 
-# Streamlit app layout
-st.set_page_config(layout="wide")  # Set layout to wide mode
-st.title("Smart Tolling System")
-st.write("Detect vehicles and recognize license plates for automated tolling.")
+# Toll fare data
+fixed_toll_rates = {
+    "Class 1": 6.00, "Class 2": 12.00, "Class 3": 18.00,
+    "Class 4": 3.00, "Class 5": 5.00, "Class 0": 0.00
+}
 
-# Define the toll plaza options
-toll_plazas = [
-    "Gombak Toll Plaza",
-    "Jalan Duta, Kuala Lumpur",
-    "Seremban, Negeri Sembilan",
-    "Juru, Penang",
-]
+variable_toll_rates = {
+    ("Jalan Duta, Kuala Lumpur", "Juru, Penang"): {
+        "Class 1": 35.51, "Class 2": 64.90, "Class 3": 86.50,
+        "Class 4": 17.71, "Class 5": 21.15, "Class 0": 0.00
+    },
+    ("Seremban, Negeri Sembilan", "Jalan Duta, Kuala Lumpur"): {
+        "Class 1": 10.58, "Class 2": 19.50, "Class 3": 29.50,
+        "Class 4": 5.33, "Class 5": 7.95, "Class 0": 0.00
+    },
+    ("Seremban, Negeri Sembilan", "Juru, Penang"): {
+        "Class 1": 43.95, "Class 2": 80.50, "Class 3": 107.20,
+        "Class 4": 22.06, "Class 5": 30.95, "Class 0": 0.00
+    }
+}
 
-# Create the layout
-left_col, right_col = st.columns(2)
+# Result log
+results_log = []
 
-# Left side: Input options
-with left_col:
-    st.header("Input Options")
+# Streamlit layout
+st.set_page_config(layout="wide")
+st.sidebar.title("Toll Plaza Selection")
 
-    # Dropdown menu for location selection
-    selected_toll_plaza = st.selectbox("Select Toll Plaza", toll_plazas)
+# Sidebar inputs
+location = st.sidebar.selectbox(
+    "Select Toll Plaza",
+    ["Gombak Toll Plaza", "Jalan Duta, Kuala Lumpur",
+     "Seremban, Negeri Sembilan", "Juru, Penang"]
+)
 
-    # File uploader or camera input
-    uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
-    use_camera = st.button("Open Camera (Coming Soon)")
+uploaded_file = st.sidebar.file_uploader("Upload Vehicle Image", type=["jpg", "jpeg", "png"])
+capture_camera = st.sidebar.button("Capture from Camera")
 
-# Right side: Display results
-with right_col:
-    st.header("Detection Results")
+# Helper functions
+def detect_vehicle(image):
+    results = model(image)
+    vehicle_info = []
+    for result in results[0].boxes:
+        class_id = int(result.cls)
+        vehicle_class = model.names[class_id]
+        x1, y1, x2, y2 = map(int, result.xyxy[0])
+        vehicle_info.append({
+            "class": vehicle_class,
+            "bbox": (x1, y1, x2, y2)
+        })
+    return vehicle_info
 
-    if uploaded_file is not None:
-        # Load the image
-        image = Image.open(uploaded_file)
-        image_np = np.array(image)
+def recognize_plate(image):
+    text = reader.readtext(image, detail=0)
+    return "".join(text)
 
-        # Run YOLO inference
-        results = model(image_np)
+def calculate_toll(entry, exit, vehicle_class):
+    if entry == "Gombak Toll Plaza":
+        return fixed_toll_rates.get(vehicle_class, 0.00)
+    key = (entry, exit) if (entry, exit) in variable_toll_rates else (exit, entry)
+    return variable_toll_rates.get(key, {}).get(vehicle_class, 0.00)
 
-        # Convert to RGB for OpenCV processing
-        image_rgb = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+# Right panel display
+col1, col2 = st.columns(2)
 
-        # Draw detections
-        for result in results[0].boxes:
-            class_id = int(result.cls)
-            class_name = model.names[class_id]
+with col1:
+    st.header("Detection Input")
+    if uploaded_file or capture_camera:
+        # Load image
+        if uploaded_file:
+            file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+            img = cv2.imdecode(file_bytes, 1)
+        else:
+            # Mocked camera capture (replace with actual camera capture logic)
+            st.write("Camera feature not yet implemented.")
+            img = None
 
-            # Get bounding box coordinates
-            x1, y1, x2, y2 = map(int, result.xyxy[0])
+        if img is not None:
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            vehicle_info = detect_vehicle(img_rgb)
+            for v_info in vehicle_info:
+                x1, y1, x2, y2 = v_info["bbox"]
+                cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(img_rgb, v_info["class"], (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            # Draw bounding boxes
-            color = (0, 255, 0) if class_name != 'license_plate' else (255, 0, 0)
-            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(image_rgb, class_name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            st.image(img_rgb, caption="Processed Image with Bounding Boxes", use_column_width=True)
 
-            # Perform OCR on license plates
-            if class_name == 'license_plate':
-                plate_image = image_rgb[y1:y2, x1:x2]
-                plate_text = reader.readtext(plate_image, detail=0)
-                st.write(f"Detected Plate: {''.join(plate_text)}")
+            # Assume vehicle detection includes class info
+            for v_info in vehicle_info:
+                vehicle_class = v_info["class"]
+                if vehicle_class.startswith("class"):
+                    plate_crop = img_rgb[v_info["bbox"][1]:v_info["bbox"][3], v_info["bbox"][0]:v_info["bbox"][2]]
+                    plate_number = recognize_plate(plate_crop)
+                    current_time = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    toll_fare = calculate_toll(location, location, vehicle_class.split("_")[1])
 
-        # Display the image with detections
-        st.image(image_rgb, caption='Detected Image', use_column_width=True)
+                    # Append to log
+                    results_log.append({
+                        "Datetime": current_time,
+                        "Vehicle Class": vehicle_class.split("_")[1].capitalize(),
+                        "Plate Number": plate_number,
+                        "Toll Mode": "Entry Only" if toll_fare == 0 else "Exit",
+                        "Toll Fare (RM)": toll_fare
+                    })
 
-    elif use_camera:
-        st.write("Camera feature is under development.")
-
-    else:
-        st.write("Upload an image to begin detection.")
-
-# Footer
-st.write("---")
-st.write(f"You selected: **{selected_toll_plaza}**")
+with col2:
+    st.header("Results")
+    st.table(results_log)
