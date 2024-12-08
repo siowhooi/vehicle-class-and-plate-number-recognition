@@ -6,7 +6,7 @@ import easyocr
 from datetime import datetime
 
 # Initialize YOLO model
-model = YOLO(r"C:\Users\wohen\PycharmProjects\test\runs\detect\train\weights\best.pt")
+model = YOLO(r"best.pt")
 # Initialize EasyOCR reader
 reader = easyocr.Reader(['en'])
 
