@@ -124,10 +124,6 @@ if uploaded_image is not None:
         plate_text = reader.readtext(plate_image, detail=0)
         recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
-        # Show the cropped plate image with OCR
-        st.image(plate_image, caption="Cropped License Plate", use_column_width=True)
-        st.write(f"Recognized Plate Number: {recognized_text}")
-
         # Determine mode (Entry/Exit)
         if recognized_text not in vehicle_entries:
             mode = "Entry"
@@ -160,14 +156,18 @@ if uploaded_image is not None:
             }
         )
 
+        # Show the cropped plate image with OCR
+        with col1:
+            st.image(plate_image, caption="Cropped License Plate", use_column_width=True)
+
     # Display the image with YOLO detections
     with col1:
         st.image(image_rgb, caption="Detected Vehicles and License Plates", use_column_width=True)
 
-    # Display results in table format
-    with col2:
-        st.subheader("Results")
-        if results_data:
-            st.table(results_data)
-        else:
-            st.write("No vehicles or license plates detected.")
+# Show results in table format
+with col2:
+    st.subheader("Results")
+    if results_data:
+        st.table(results_data)
+    else:
+        st.write("No vehicles or license plates detected.")
