@@ -77,7 +77,6 @@ if uploaded_image is not None:
     # Check if the model file exists and load it
     try:
         model = YOLO(r"best.pt")  # Ensure the model path is correct
-        st.success("Model loaded successfully!")
     except Exception as e:
         st.error(f"Error loading model: {e}")
         st.stop()  # Stop execution if model loading fails
@@ -91,9 +90,6 @@ if uploaded_image is not None:
         st.error("Failed to decode image. Please try again with a valid image.")
     else:
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # Debugging: Show the image shape and type
-        st.write(f"Image shape: {image.shape}, dtype: {image.dtype}")
 
         try:
             # Run YOLO inference
@@ -187,5 +183,3 @@ if uploaded_image is not None:
                     st.table(results_data)
                 else:
                     st.write("No vehicles or license plates detected.")
-        except Exception as e:
-            st.error(f"Error during inference: {e}")
