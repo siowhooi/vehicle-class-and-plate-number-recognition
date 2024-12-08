@@ -15,6 +15,10 @@ col1, col2 = st.columns(2)
 if 'vehicle_entries' not in st.session_state:
     st.session_state['vehicle_entries'] = {}
 
+# Initialize a list to store the results (persistent across image uploads and plaza selections)
+if 'detection_results' not in st.session_state:
+    st.session_state['detection_results'] = []
+
 # Define fixed toll rates for Gombak Toll Plaza
 fixed_toll_rates = {
     "Class 0": 0.00,
@@ -100,9 +104,6 @@ if uploaded_image is not None:
             # Initialize EasyOCR reader
             reader = easyocr.Reader(['en'])
 
-            # Initialize results storage
-            results_data = []
-
             # Process YOLO detections
             for box in results[0].boxes:
                 class_id = int(box.cls)
@@ -154,7 +155,7 @@ if uploaded_image is not None:
                     toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
 
                 # Append to results data
-                results_data.append(
+                st.session_state['detection_results'].append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
@@ -181,8 +182,8 @@ if uploaded_image is not None:
             # Display results in table format in col2
             with col2:
                 st.subheader("Results")
-                if results_data:
-                    st.table(results_data)
+                if st.session_state['detection_results']:
+                    st.table(st.session_state['detection_results'])
                 else:
                     st.write("No vehicles or license plates detected.")
         except Exception as e:
