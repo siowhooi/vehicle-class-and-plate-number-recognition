@@ -74,12 +74,13 @@ with col1:
 
 # Process uploaded image
 if uploaded_image is not None:
-    # Load the YOLO model
+    # Check if the model file exists and load it
     try:
-        model = YOLO(r"best.pt")  # Path to your model
+        model = YOLO(r"best.pt")  # Ensure the model path is correct
         st.success("Model loaded successfully!")
     except Exception as e:
         st.error(f"Error loading model: {e}")
+        st.stop()  # Stop execution if model loading fails
 
     # Read and decode the uploaded image
     image_data = uploaded_image.read()
@@ -91,94 +92,100 @@ if uploaded_image is not None:
     else:
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Run YOLO inference
-        results = model(image)
+        # Debugging: Show the image shape and type
+        st.write(f"Image shape: {image.shape}, dtype: {image.dtype}")
 
-        # Initialize EasyOCR reader
-        reader = easyocr.Reader(['en'])
+        try:
+            # Run YOLO inference
+            results = model(image_rgb)  # Use the RGB image for inference
 
-        # Initialize results storage
-        results_data = []
+            # Initialize EasyOCR reader
+            reader = easyocr.Reader(['en'])
 
-        # Process YOLO detections
-        for box in results[0].boxes:
-            class_id = int(box.cls)
-            class_name = model.names[class_id]
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            # Initialize results storage
+            results_data = []
 
-            # Skip non-vehicle detections
-            if class_name not in vehicle_classes:
-                continue
-
-            # Get vehicle class
-            vehicle_class = vehicle_classes[class_name]
-
-            # Draw bounding boxes and labels on the original image
-            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(
-                image_rgb,
-                vehicle_class,
-                (x1, y1 - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 255, 0),
-                1,
-            )
-
-            # License plate recognition (crop the vehicle's plate)
-            plate_image = image_rgb[y1:y2, x1:x2]
-            plate_text = reader.readtext(plate_image, detail=0)
-            recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
-
-            # Determine mode (Entry/Exit)
-            if recognized_text not in vehicle_entries:
-                mode = "Entry"
-                vehicle_entries[recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
-                toll_fare = "-"
-            else:
-                mode = "Exit"
-                entry_data = vehicle_entries.pop(recognized_text)
-                entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
-
-                # Calculate toll fare for variable routes
-                toll_fare = "-"
-                route_key = tuple(sorted([entry_plaza, toll_plaza]))
-                if route_key in variable_toll_rates:
-                    toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
-
-            # Fixed toll fare for Gombak Toll Plaza
-            if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
-                toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
-
-            # Append to results data
-            results_data.append(
-                {
-                    "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "Vehicle Class": vehicle_class,
-                    "Plate Number": recognized_text,
-                    "Toll": toll_plaza,
-                    "Mode": mode,
-                    "Toll Fare (RM)": f"{toll_fare:.2f}" if toll_fare != "-" else "-",
-                }
-            )
-
-        # Display the image with YOLO detections (vehicles)
-        with col1:
-            st.image(image_rgb, caption="Detected Vehicles and License Plates", use_column_width=True)
-
-            # Show the cropped plate image with OCR below the YOLO detections
+            # Process YOLO detections
             for box in results[0].boxes:
                 class_id = int(box.cls)
                 class_name = model.names[class_id]
-                if class_name in ['license_plate', 'license_plate_taxi']:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    plate_image = image_rgb[y1:y2, x1:x2]
-                    st.image(plate_image, caption="Cropped License Plate", use_column_width=True)
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-        # Display results in table format in col2
-        with col2:
-            st.subheader("Results")
-            if results_data:
-                st.table(results_data)
-            else:
-                st.write("No vehicles or license plates detected.")
+                # Skip non-vehicle detections
+                if class_name not in vehicle_classes:
+                    continue
+
+                # Get vehicle class
+                vehicle_class = vehicle_classes[class_name]
+
+                # Draw bounding boxes and labels on the original image
+                cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(
+                    image_rgb,
+                    vehicle_class,
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 0),
+                    1,
+                )
+
+                # License plate recognition (crop the vehicle's plate)
+                plate_image = image_rgb[y1:y2, x1:x2]
+                plate_text = reader.readtext(plate_image, detail=0)
+                recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
+
+                # Determine mode (Entry/Exit)
+                if recognized_text not in vehicle_entries:
+                    mode = "Entry"
+                    vehicle_entries[recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+                    toll_fare = "-"
+                else:
+                    mode = "Exit"
+                    entry_data = vehicle_entries.pop(recognized_text)
+                    entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
+
+                    # Calculate toll fare for variable routes
+                    toll_fare = "-"
+                    route_key = tuple(sorted([entry_plaza, toll_plaza]))
+                    if route_key in variable_toll_rates:
+                        toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
+
+                # Fixed toll fare for Gombak Toll Plaza
+                if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
+                    toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
+
+                # Append to results data
+                results_data.append(
+                    {
+                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Vehicle Class": vehicle_class,
+                        "Plate Number": recognized_text,
+                        "Toll": toll_plaza,
+                        "Mode": mode,
+                        "Toll Fare (RM)": f"{toll_fare:.2f}" if toll_fare != "-" else "-",
+                    }
+                )
+
+            # Display the image with YOLO detections (vehicles)
+            with col1:
+                st.image(image_rgb, caption="Detected Vehicles and License Plates", use_column_width=True)
+
+                # Show the cropped plate image with OCR below the YOLO detections
+                for box in results[0].boxes:
+                    class_id = int(box.cls)
+                    class_name = model.names[class_id]
+                    if class_name in ['license_plate', 'license_plate_taxi']:
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        plate_image = image_rgb[y1:y2, x1:x2]
+                        st.image(plate_image, caption="Cropped License Plate", use_column_width=True)
+
+            # Display results in table format in col2
+            with col2:
+                st.subheader("Results")
+                if results_data:
+                    st.table(results_data)
+                else:
+                    st.write("No vehicles or license plates detected.")
+        except Exception as e:
+            st.error(f"Error during inference: {e}")
