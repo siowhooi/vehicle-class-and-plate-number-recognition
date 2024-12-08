@@ -75,7 +75,11 @@ with col1:
 # Process uploaded image
 if uploaded_image is not None:
     # Load the YOLO model
+    try:
     model = YOLO(r"best.pt")
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+
 
     # Read and decode the uploaded image
     image = np.array(bytearray(uploaded_image.read()), dtype=np.uint8)
