@@ -76,113 +76,109 @@ with col1:
 if uploaded_image is not None:
     # Load the YOLO model
     try:
-        model = YOLO(r"best.pt")
+        model = YOLO(r"best.pt")  # Path to your model
+        st.success("Model loaded successfully!")
     except Exception as e:
         st.error(f"Error loading model: {e}")
 
     # Read and decode the uploaded image
-    image = np.array(bytearray(uploaded_image.read()), dtype=np.uint8)
+    image_data = uploaded_image.read()
+    image = np.frombuffer(image_data, dtype=np.uint8)
     image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    if image is None:
+        st.error("Failed to decode image. Please try again with a valid image.")
+    else:
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # Run YOLO inference
-    results = model(image)
+        # Run YOLO inference
+        results = model(image)
 
-    # Initialize EasyOCR reader
-    reader = easyocr.Reader(['en'])
+        # Initialize EasyOCR reader
+        reader = easyocr.Reader(['en'])
 
-    # Initialize results storage
-    results_data = []
+        # Initialize results storage
+        results_data = []
 
-    # Process YOLO detections
-    plate_images = []  # List to store plate images for display
-    for box in results[0].boxes:
-        class_id = int(box.cls)
-        class_name = model.names[class_id]
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        # Process YOLO detections
+        for box in results[0].boxes:
+            class_id = int(box.cls)
+            class_name = model.names[class_id]
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-        # Skip non-vehicle detections
-        if class_name not in vehicle_classes:
-            continue
+            # Skip non-vehicle detections
+            if class_name not in vehicle_classes:
+                continue
 
-        # Get vehicle class
-        vehicle_class = vehicle_classes[class_name]
+            # Get vehicle class
+            vehicle_class = vehicle_classes[class_name]
 
-        # Draw bounding boxes and labels on the image
-        cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(
-            image_rgb,
-            vehicle_class,
-            (x1, y1 - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (0, 255, 0),
-            1,
-        )
+            # Draw bounding boxes and labels on the original image
+            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(
+                image_rgb,
+                vehicle_class,
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                1,
+            )
 
-        # License plate recognition
-        plate_image = image_rgb[y1:y2, x1:x2]
-        plate_text = reader.readtext(plate_image, detail=0)
-        recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
+            # License plate recognition (crop the vehicle's plate)
+            plate_image = image_rgb[y1:y2, x1:x2]
+            plate_text = reader.readtext(plate_image, detail=0)
+            recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
-        # Draw bounding boxes for OCR detection
-        for (bbox, text, _) in reader.readtext(plate_image):
-            (top_left, top_right, bottom_right, bottom_left) = bbox
-            top_left = tuple(map(int, top_left))
-            bottom_right = tuple(map(int, bottom_right))
-            cv2.rectangle(plate_image, top_left, bottom_right, (0, 255, 0), 2)
+            # Determine mode (Entry/Exit)
+            if recognized_text not in vehicle_entries:
+                mode = "Entry"
+                vehicle_entries[recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+                toll_fare = "-"
+            else:
+                mode = "Exit"
+                entry_data = vehicle_entries.pop(recognized_text)
+                entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
 
-        # Store cropped plate image for display
-        plate_images.append(plate_image)
+                # Calculate toll fare for variable routes
+                toll_fare = "-"
+                route_key = tuple(sorted([entry_plaza, toll_plaza]))
+                if route_key in variable_toll_rates:
+                    toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
 
-        # Determine mode (Entry/Exit)
-        if recognized_text not in vehicle_entries:
-            mode = "Entry"
-            vehicle_entries[recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
-            toll_fare = "-"
-        else:
-            mode = "Exit"
-            entry_data = vehicle_entries.pop(recognized_text)
-            entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
+            # Fixed toll fare for Gombak Toll Plaza
+            if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
+                toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
 
-            # Calculate toll fare for variable routes
-            toll_fare = "-"
-            route_key = tuple(sorted([entry_plaza, toll_plaza]))
-            if route_key in variable_toll_rates:
-                toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
+            # Append to results data
+            results_data.append(
+                {
+                    "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "Vehicle Class": vehicle_class,
+                    "Plate Number": recognized_text,
+                    "Toll": toll_plaza,
+                    "Mode": mode,
+                    "Toll Fare (RM)": f"{toll_fare:.2f}" if toll_fare != "-" else "-",
+                }
+            )
 
-        # Fixed toll fare for Gombak Toll Plaza
-        if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
-            toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
+        # Display the image with YOLO detections (vehicles)
+        with col1:
+            st.image(image_rgb, caption="Detected Vehicles and License Plates", use_column_width=True)
 
-        # Append to results data
-        results_data.append(
-            {
-                "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "Vehicle Class": vehicle_class,
-                "Plate Number": recognized_text,
-                "Toll": toll_plaza,
-                "Mode": mode,
-                "Toll Fare (RM)": f"{toll_fare:.2f}" if toll_fare != "-" else "-",
-            }
-        )
+        # Show the cropped plate image with OCR
+        for box in results[0].boxes:
+            class_id = int(box.cls)
+            class_name = model.names[class_id]
+            if class_name in ['license_plate', 'license_plate_taxi']:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                plate_image = image_rgb[y1:y2, x1:x2]
+                st.image(plate_image, caption="Cropped License Plate", use_column_width=True)
 
-    # Display the image with YOLO detections (Vehicle detection)
-    with col1:
-        st.image(image_rgb, caption="Detected Vehicles and License Plates with YOLO", use_column_width=True)
-
-    # Display cropped plate images with OCR detection (License plate detection)
-    with col2:
-        if plate_images:
-            for plate_image in plate_images:
-                st.image(plate_image, caption="Detected License Plate with OCR", use_column_width=True)
-        else:
-            st.write("No license plate detected.")
-
-    # Show results in table format (Entry/Exit with toll data)
-    with col2:
-        st.subheader("Results")
-        if results_data:
-            st.table(results_data)
-        else:
-            st.write("No vehicles or license plates detected.")
+        # Display results in table format
+        with col2:
+            st.subheader("Results")
+            if results_data:
+                st.table(results_data)
+            else:
+                st.write("No vehicles or license plates detected.")
