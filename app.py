@@ -3,6 +3,7 @@ import cv2
 import easyocr
 from ultralytics import YOLO
 import numpy as np
+import os
 from datetime import datetime
 
 # Streamlit Title
@@ -76,11 +77,15 @@ with col1:
 # Process uploaded image
 if uploaded_image is not None:
     # Check if the model file exists and load it
-    try:
-        model = YOLO(r"best.pt")  # Ensure the model path is correct
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-        st.stop()  # Stop execution if model loading fails
+    model_path = "best.pt"  # Update with the correct path to your model
+    if not os.path.exists(model_path):
+        st.error(f"Model file not found at {model_path}")
+    else:
+        try:
+            model = YOLO(model_path)  # Load YOLO model
+        except Exception as e:
+            st.error(f"Error loading model: {e}")
+            st.stop()  # Stop execution if model loading fails
 
     # Read and decode the uploaded image
     image_data = uploaded_image.read()
