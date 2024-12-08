@@ -11,25 +11,45 @@ st.title("Vehicle and License Plate Recognition")
 # Create a left and right layout
 col1, col2 = st.columns(2)
 
-with col1:
-    # Dropdown menu for toll plaza selection
-    toll_plaza = st.selectbox(
-        "Select Toll Plaza",
-        [
-            "Gombak Toll Plaza",
-            "Jalan Duta, Kuala Lumpur",
-            "Seremban, Negeri Sembilan",
-            "Juru, Penang",
-        ],
-    )
+# Initialize a dictionary to track vehicle entry and exit
+vehicle_entries = {}
 
-    # File uploader for image upload
-    uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+# Define fixed toll rates for Gombak Toll Plaza
+fixed_toll_rates = {
+    "Class 0": 0.00,
+    "Class 1": 6.00,
+    "Class 2": 12.00,
+    "Class 3": 18.00,
+    "Class 4": 3.00,
+    "Class 5": 5.00,
+}
 
-# Initialize a results list to store data
-results_data = []
+# Define variable toll rates for other routes
+variable_toll_rates = {
+    ("Jalan Duta, Kuala Lumpur", "Juru, Penang"): {
+        "Class 1": 35.51,
+        "Class 2": 64.90,
+        "Class 3": 86.50,
+        "Class 4": 17.71,
+        "Class 5": 21.15,
+    },
+    ("Seremban, Negeri Sembilan", "Jalan Duta, Kuala Lumpur"): {
+        "Class 1": 10.58,
+        "Class 2": 19.50,
+        "Class 3": 29.50,
+        "Class 4": 5.33,
+        "Class 5": 7.95,
+    },
+    ("Seremban, Negeri Sembilan", "Juru, Penang"): {
+        "Class 1": 43.95,
+        "Class 2": 80.50,
+        "Class 3": 107.20,
+        "Class 4": 22.06,
+        "Class 5": 30.95,
+    },
+}
 
-# Define vehicle classes
+# Vehicle classes
 vehicle_classes = {
     "class0_emergencyVehicle": "Class 0",
     "class1_lightVehicle": "Class 1",
@@ -39,9 +59,23 @@ vehicle_classes = {
     "class5_bus": "Class 5",
 }
 
+# Define toll plaza selection and image upload
+with col1:
+    toll_plaza = st.selectbox(
+        "Select Toll Plaza",
+        [
+            "Gombak Toll Plaza",
+            "Jalan Duta, Kuala Lumpur",
+            "Seremban, Negeri Sembilan",
+            "Juru, Penang",
+        ],
+    )
+    uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+# Process uploaded image
 if uploaded_image is not None:
     # Load the YOLO model
-    model = YOLO(r"best.pt")  # Update with the path to your YOLO model weights
+    model = YOLO(r"best.pt")
 
     # Read and decode the uploaded image
     image = np.array(bytearray(uploaded_image.read()), dtype=np.uint8)
@@ -51,8 +85,11 @@ if uploaded_image is not None:
     # Run YOLO inference
     results = model(image)
 
-    # Initialize EasyOCR reader for license plate recognition
+    # Initialize EasyOCR reader
     reader = easyocr.Reader(['en'])
+
+    # Initialize results storage
+    results_data = []
 
     # Process YOLO detections
     for box in results[0].boxes:
@@ -60,41 +97,61 @@ if uploaded_image is not None:
         class_name = model.names[class_id]
         x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-        # Draw bounding box and label
-        color = (0, 255, 0) if class_name not in ["license_plate", "license_plate_taxi"] else (255, 0, 0)
-        cv2.rectangle(image_rgb, (x1, y1), (x2, y2), color, 2)
-        cv2.putText(image_rgb, class_name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        # Skip non-vehicle detections
+        if class_name not in vehicle_classes:
+            continue
 
-        # License plate OCR
-        if class_name in ["license_plate", "license_plate_taxi"]:
-            plate_image = image_rgb[y1:y2, x1:x2]
-            plate_text = reader.readtext(plate_image, detail=0)
-            recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
+        # Get vehicle class
+        vehicle_class = vehicle_classes[class_name]
 
-            # Store license plate information
-            results_data.append(
-                {
-                    "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "Vehicle Class": "N/A",
-                    "Plate Number": recognized_text,
-                    "Toll": toll_plaza,
-                    "Mode": "N/A",
-                    "Toll Fare (RM)": "-",
-                }
-            )
+        # Draw bounding boxes and labels
+        cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(
+            image_rgb,
+            vehicle_class,
+            (x1, y1 - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 255, 0),
+            1,
+        )
+
+        # License plate recognition
+        plate_image = image_rgb[y1:y2, x1:x2]
+        plate_text = reader.readtext(plate_image, detail=0)
+        recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
+
+        # Determine mode (Entry/Exit)
+        if recognized_text not in vehicle_entries:
+            mode = "Entry"
+            vehicle_entries[recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+            toll_fare = "-"
         else:
-            # Process vehicle class information
-            vehicle_class = vehicle_classes.get(class_name, "Unknown")
-            results_data.append(
-                {
-                    "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "Vehicle Class": vehicle_class,
-                    "Plate Number": "N/A",
-                    "Toll": toll_plaza,
-                    "Mode": "N/A",
-                    "Toll Fare (RM)": "-",
-                }
-            )
+            mode = "Exit"
+            entry_data = vehicle_entries.pop(recognized_text)
+            entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
+
+            # Calculate toll fare for variable routes
+            toll_fare = "-"
+            route_key = tuple(sorted([entry_plaza, toll_plaza]))
+            if route_key in variable_toll_rates:
+                toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
+
+        # Fixed toll fare for Gombak Toll Plaza
+        if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
+            toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
+
+        # Append to results data
+        results_data.append(
+            {
+                "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "Vehicle Class": vehicle_class,
+                "Plate Number": recognized_text,
+                "Toll": toll_plaza,
+                "Mode": mode,
+                "Toll Fare (RM)": f"{toll_fare:.2f}" if toll_fare != "-" else "-",
+            }
+        )
 
     # Display the image with YOLO detections
     with col1:
