@@ -95,6 +95,7 @@ if uploaded_image is not None:
     results_data = []
 
     # Process YOLO detections
+    plate_images = []  # List to store plate images for display
     for box in results[0].boxes:
         class_id = int(box.cls)
         class_name = model.names[class_id]
@@ -107,7 +108,7 @@ if uploaded_image is not None:
         # Get vehicle class
         vehicle_class = vehicle_classes[class_name]
 
-        # Draw bounding boxes and labels
+        # Draw bounding boxes and labels on the image
         cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(
             image_rgb,
@@ -123,6 +124,16 @@ if uploaded_image is not None:
         plate_image = image_rgb[y1:y2, x1:x2]
         plate_text = reader.readtext(plate_image, detail=0)
         recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
+
+        # Draw bounding boxes for OCR detection
+        for (bbox, text, _) in reader.readtext(plate_image):
+            (top_left, top_right, bottom_right, bottom_left) = bbox
+            top_left = tuple(map(int, top_left))
+            bottom_right = tuple(map(int, bottom_right))
+            cv2.rectangle(plate_image, top_left, bottom_right, (0, 255, 0), 2)
+
+        # Store cropped plate image for display
+        plate_images.append(plate_image)
 
         # Determine mode (Entry/Exit)
         if recognized_text not in vehicle_entries:
@@ -156,18 +167,22 @@ if uploaded_image is not None:
             }
         )
 
-        # Show the cropped plate image with OCR
-        with col1:
-            st.image(plate_image, caption="Cropped License Plate", use_column_width=True)
-
-    # Display the image with YOLO detections
+    # Display the image with YOLO detections (Vehicle detection)
     with col1:
-        st.image(image_rgb, caption="Detected Vehicles and License Plates", use_column_width=True)
+        st.image(image_rgb, caption="Detected Vehicles and License Plates with YOLO", use_column_width=True)
 
-# Show results in table format
-with col2:
-    st.subheader("Results")
-    if results_data:
-        st.table(results_data)
-    else:
-        st.write("No vehicles or license plates detected.")
+    # Display cropped plate images with OCR detection (License plate detection)
+    with col2:
+        if plate_images:
+            for plate_image in plate_images:
+                st.image(plate_image, caption="Detected License Plate with OCR", use_column_width=True)
+        else:
+            st.write("No license plate detected.")
+
+    # Show results in table format (Entry/Exit with toll data)
+    with col2:
+        st.subheader("Results")
+        if results_data:
+            st.table(results_data)
+        else:
+            st.write("No vehicles or license plates detected.")
