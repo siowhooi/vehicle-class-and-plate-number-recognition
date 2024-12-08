@@ -3,7 +3,6 @@ import cv2
 import easyocr
 from ultralytics import YOLO
 import numpy as np
-import os
 from datetime import datetime
 
 # Streamlit Title
@@ -13,7 +12,8 @@ st.title("Vehicle and License Plate Recognition")
 col1, col2 = st.columns(2)
 
 # Initialize a dictionary to track vehicle entry and exit
-vehicle_entries = {}
+if 'vehicle_entries' not in st.session_state:
+    st.session_state['vehicle_entries'] = {}
 
 # Define fixed toll rates for Gombak Toll Plaza
 fixed_toll_rates = {
@@ -77,15 +77,11 @@ with col1:
 # Process uploaded image
 if uploaded_image is not None:
     # Check if the model file exists and load it
-    model_path = "best.pt"  # Update with the correct path to your model
-    if not os.path.exists(model_path):
-        st.error(f"Model file not found at {model_path}")
-    else:
-        try:
-            model = YOLO(model_path)  # Load YOLO model
-        except Exception as e:
-            st.error(f"Error loading model: {e}")
-            st.stop()  # Stop execution if model loading fails
+    try:
+        model = YOLO(r"best.pt")  # Ensure the model path is correct
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.stop()  # Stop execution if model loading fails
 
     # Read and decode the uploaded image
     image_data = uploaded_image.read()
@@ -138,13 +134,13 @@ if uploaded_image is not None:
                 recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
                 # Determine mode (Entry/Exit)
-                if recognized_text not in vehicle_entries:
+                if recognized_text not in st.session_state['vehicle_entries']:
                     mode = "Entry"
-                    vehicle_entries[recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+                    st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
                     toll_fare = "-"
                 else:
                     mode = "Exit"
-                    entry_data = vehicle_entries.pop(recognized_text)
+                    entry_data = st.session_state['vehicle_entries'].pop(recognized_text)
                     entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
 
                     # Calculate toll fare for variable routes
@@ -172,6 +168,7 @@ if uploaded_image is not None:
             # Display the image with YOLO detections (vehicles)
             with col1:
                 st.image(image_rgb, caption="Detected Vehicle", use_column_width=True)
+
                 # Show the cropped plate image with OCR below the YOLO detections
                 for box in results[0].boxes:
                     class_id = int(box.cls)
