@@ -172,6 +172,14 @@ if uploaded_image is not None:
             # Display the image with YOLO detections (vehicles)
             with col1:
                 st.image(image_rgb, caption="Detected Vehicle", use_column_width=True)
+                # Show the cropped plate image with OCR below the YOLO detections
+                for box in results[0].boxes:
+                    class_id = int(box.cls)
+                    class_name = model.names[class_id]
+                    if class_name in ['license_plate', 'license_plate_taxi']:
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        plate_image = image_rgb[y1:y2, x1:x2]
+                        st.image(plate_image, caption="Detected License Plate", use_column_width=True)
 
             # Display results in table format in col2
             with col2:
