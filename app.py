@@ -124,6 +124,10 @@ if uploaded_image is not None:
         plate_text = reader.readtext(plate_image, detail=0)
         recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
+        # Show the cropped plate image with OCR
+        st.image(plate_image, caption="Cropped License Plate", use_column_width=True)
+        st.write(f"Recognized Plate Number: {recognized_text}")
+
         # Determine mode (Entry/Exit)
         if recognized_text not in vehicle_entries:
             mode = "Entry"
