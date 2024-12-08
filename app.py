@@ -145,12 +145,11 @@ if uploaded_image is not None:
 
                     # Calculate toll fare for variable routes
                     toll_fare = "-"
-                    if entry_plaza != "Gombak Toll Plaza":  # Only calculate for non-Gombak plazas
-                        route_key = tuple(sorted([entry_plaza, toll_plaza]))
-                        if route_key in variable_toll_rates:
-                            toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
+                    route_key = tuple(sorted([entry_plaza, toll_plaza]))
+                    if route_key in variable_toll_rates:
+                        toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
 
-                # Fixed toll fare for Gombak Toll Plaza (only on Entry)
+                # Fixed toll fare for Gombak Toll Plaza
                 if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
                     toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
 
