@@ -116,42 +116,34 @@ if uploaded_image is not None:
                 # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
 
-                # Draw bounding boxes and labels on the original image
-                cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(
-                    image_rgb,
-                    vehicle_class,
-                    (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (0, 255, 0),
-                    1,
-                )
-
                 # License plate recognition (crop the vehicle's plate)
                 plate_image = image_rgb[y1:y2, x1:x2]
                 plate_text = reader.readtext(plate_image, detail=0)
                 recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
-                # Determine mode based on previous detection count
+                # Determine mode and compute toll fare
                 if recognized_text not in st.session_state['vehicle_entries']:
                     mode = "Entry"
+                    st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+                    toll_fare = "-"
                 else:
-                    mode = "Exit" if len(st.session_state['vehicle_entries'][recognized_text]) % 2 != 0 else "Entry"
+                    mode = "Exit" if st.session_state['vehicle_entries'][recognized_text]["plaza"] != toll_plaza else "Entry"
+                    if mode == "Exit":
+                        entry_data = st.session_state['vehicle_entries'].pop(recognized_text)
+                        entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
 
-                # Add toll plaza and time data
-                st.session_state['vehicle_entries'].setdefault(recognized_text, []).append({"plaza": toll_plaza, "class": vehicle_class, "mode": mode})
+                        # Calculate toll fare for variable routes
+                        toll_fare = "-"
+                        route_key = tuple(sorted([entry_plaza, toll_plaza]))
+                        if route_key in variable_toll_rates:
+                            toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
+                    else:
+                        st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+                        toll_fare = "-"
 
-                # Calculate toll fare
-                toll_fare = "-"
+                # Fixed toll fare for Gombak Toll Plaza (Entry Only)
                 if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
                     toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
-                elif mode == "Exit":
-                    entry_data = st.session_state['vehicle_entries'][recognized_text][-2]
-                    entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
-                    route_key = tuple(sorted([entry_plaza, toll_plaza]))
-                    if route_key in variable_toll_rates:
-                        toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
 
                 # Append to results data
                 results_data.append(
@@ -165,7 +157,7 @@ if uploaded_image is not None:
                     }
                 )
 
-            # Display the image with YOLO detections
+            # Display the image with YOLO detections (vehicles)
             with col1:
                 st.image(image_rgb, caption="Detected Vehicle", use_column_width=True)
 
