@@ -183,3 +183,5 @@ if uploaded_image is not None:
                     st.table(results_data)
                 else:
                     st.write("No vehicles or license plates detected.")
+        except Exception as e:
+            st.error(f"Error during inference: {e}")
