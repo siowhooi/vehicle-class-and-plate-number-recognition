@@ -131,7 +131,7 @@ if uploaded_image is not None:
                     st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
                     toll_fare = "-"
                 else:
-                    mode = "Exit" if st.session_state['vehicle_entries'][recognized_text]["plaza"] != toll_plaza else "Entry"
+                    mode = "Entry Only" if toll_plaza == "Gombak Toll Plaza" else "Exit"
                     if mode == "Exit":
                         entry_data = st.session_state['vehicle_entries'].pop(recognized_text)
                         entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
@@ -146,7 +146,7 @@ if uploaded_image is not None:
                         toll_fare = "-"
 
                 # Fixed toll fare for Gombak Toll Plaza (Entry Only)
-                if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
+                if toll_plaza == "Gombak Toll Plaza" and mode == "Entry Only":
                     toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
 
                 # Append to temporary results storage
