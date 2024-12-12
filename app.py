@@ -115,18 +115,20 @@ if uploaded_image is not None:
                 recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
                 if toll_plaza == "Gombak Toll Plaza":
+                    # Fixed mode for Gombak Toll Plaza
                     mode = "Entry Only"
-                    st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
                     toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
+                    st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
                 else:
+                    # Entry/Exit logic for other toll plazas
                     if recognized_text not in st.session_state['vehicle_entries']:
                         mode = "Entry"
-                        st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
                         toll_fare = "-"
+                        st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
                     else:
                         previous_entry = st.session_state['vehicle_entries'].pop(recognized_text)
                         entry_plaza, entry_class = previous_entry["plaza"], previous_entry["class"]
-                        
+
                         mode = "Exit"
                         toll_fare = "-"
                         route_key = tuple(sorted([entry_plaza, toll_plaza]))
