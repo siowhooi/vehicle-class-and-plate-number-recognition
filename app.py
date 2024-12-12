@@ -171,8 +171,8 @@ if uploaded_image is not None:
             # Display results in table format in col2
             with col2:
                 st.subheader("Results")
-                if st.session_state['results_data']:
-                    st.table(session_state['results_data'])
+                if new_results:
+                    st.table(new_results)
                 else:
                     st.write("No vehicles or license plates detected.")
         except Exception as e:
