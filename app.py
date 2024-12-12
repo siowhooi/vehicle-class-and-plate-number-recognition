@@ -171,9 +171,12 @@ if uploaded_image is not None:
             # Display results in table format in col2
             with col2:
                 st.subheader("Results")
-                if new_results:
-                    st.table(new_results)
-                else:
-                    st.write("No vehicles or license plates detected.")
-        except Exception as e:
-            st.error(f"Error during inference: {e}")
+    
+            # Display persistent results from session state
+            if st.session_state['results_data']:
+                st.table(st.session_state['results_data'])
+            else:
+                st.write("No data available yet.")
+
+            except Exception as e:
+                st.error(f"Error during inference: {e}")
