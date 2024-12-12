@@ -164,16 +164,18 @@ if uploaded_image is not None:
             # Store new results to session state
             st.session_state['results_data'].extend(new_results)
 
-            # Display the image with YOLO detections (vehicles)
+                       # Display the image with YOLO detections (vehicles)
             with col1:
-                st.image(image_rgb, caption="Detected Vehicle",  use_container_width=True)
+                st.image(image_rgb, caption="Detected Vehicle", use_container_width=True)
 
             # Display results in table format in col2
             with col2:
                 st.subheader("Results")
-    
-            # Display persistent results from session state
-            if st.session_state['results_data']:
-                st.table(st.session_state['results_data'])
-            else:
-                st.write("No data available yet.")
+
+                # Display persistent results from session state
+                if st.session_state['results_data']:
+                    st.table(st.session_state['results_data'])
+                else:
+                    st.write("No data available yet.")
+        except Exception as e:
+            st.error(f"Error during inference: {e}")
