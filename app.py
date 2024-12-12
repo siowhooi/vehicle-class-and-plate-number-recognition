@@ -80,11 +80,12 @@ with col1:
 
 # Process uploaded image
 if uploaded_image is not None:
+    # Check if the model file exists and load it
     try:
         model = YOLO(r"best.pt")  # Ensure the model path is correct
     except Exception as e:
         st.error(f"Error loading model: {e}")
-        st.stop()
+        st.stop()  # Stop execution if model loading fails
 
     # Read and decode the uploaded image
     image_data = uploaded_image.read()
@@ -97,44 +98,58 @@ if uploaded_image is not None:
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         try:
-            results = model(image_rgb)
+            # Run YOLO inference
+            results = model(image_rgb)  # Use the RGB image for inference
+
+            # Initialize EasyOCR reader
             reader = easyocr.Reader(['en'])
+
+            # Initialize temporary storage for new results
             new_results = []
 
+            # Process YOLO detections
             for box in results[0].boxes:
                 class_id = int(box.cls)
                 class_name = model.names[class_id]
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
 
+                # Skip non-vehicle detections
                 if class_name not in vehicle_classes:
                     continue
 
+                # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
+
+                # License plate recognition (crop the vehicle's plate)
                 plate_image = image_rgb[y1:y2, x1:x2]
                 plate_text = reader.readtext(plate_image, detail=0)
                 recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
-                if toll_plaza == "Gombak Toll Plaza":
-                    # Fixed mode for Gombak Toll Plaza
-                    mode = "Entry Only"
-                    toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
+                # Determine mode and compute toll fare
+                if recognized_text not in st.session_state['vehicle_entries']:
+                    mode = "Entry"
                     st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+                    toll_fare = "-"
                 else:
-                    # Entry/Exit logic for other toll plazas
-                    if recognized_text not in st.session_state['vehicle_entries']:
-                        mode = "Entry"
-                        toll_fare = "-"
-                        st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
-                    else:
-                        previous_entry = st.session_state['vehicle_entries'].pop(recognized_text)
-                        entry_plaza, entry_class = previous_entry["plaza"], previous_entry["class"]
+                    mode = "Exit" if st.session_state['vehicle_entries'][recognized_text]["plaza"] != toll_plaza else "Entry"
+                    if mode == "Exit":
+                        entry_data = st.session_state['vehicle_entries'].pop(recognized_text)
+                        entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
 
-                        mode = "Exit"
+                        # Calculate toll fare for variable routes
                         toll_fare = "-"
                         route_key = tuple(sorted([entry_plaza, toll_plaza]))
                         if route_key in variable_toll_rates:
                             toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
+                    else:
+                        st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+                        toll_fare = "-"
 
+                # Fixed toll fare for Gombak Toll Plaza (Entry Only)
+                if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
+                    toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
+
+                # Append to temporary results storage
                 new_results.append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -146,13 +161,18 @@ if uploaded_image is not None:
                     }
                 )
 
+            # Store new results to session state
             st.session_state['results_data'].extend(new_results)
 
+            # Display the image with YOLO detections (vehicles)
             with col1:
                 st.image(image_rgb, caption="Detected Vehicle", use_container_width=True)
 
+            # Display results in table format in col2
             with col2:
                 st.subheader("Results")
+
+                # Display persistent results from session state
                 if st.session_state['results_data']:
                     st.table(st.session_state['results_data'])
                 else:
