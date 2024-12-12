@@ -177,5 +177,3 @@ if uploaded_image is not None:
                 st.table(st.session_state['results_data'])
             else:
                 st.write("No data available yet.")
-
-  
