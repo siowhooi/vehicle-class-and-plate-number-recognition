@@ -178,5 +178,4 @@ if uploaded_image is not None:
             else:
                 st.write("No data available yet.")
 
-            except Exception as e:
-                st.error(f"Error during inference: {e}")
+  
