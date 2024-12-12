@@ -159,7 +159,7 @@ if uploaded_image is not None:
 
             # Display the image with YOLO detections (vehicles)
             with col1:
-                st.image(image_rgb, caption="Detected Vehicle", use_column_width=True)
+                st.image(image_rgb, caption="Detected Vehicle",  use_container_width=True)
 
             # Display results in table format in col2
             with col2:
