@@ -126,23 +126,25 @@ if uploaded_image is not None:
                 recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
                 # Determine mode and compute toll fare
-                if recognized_text not in st.session_state['vehicle_entries']:
+                if toll_plaza == "Gombak Toll Plaza":
                     mode = "Entry Only"
-                    st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
-                    toll_fare = "-"
-                else:
-                    entry_data = st.session_state['vehicle_entries'][recognized_text]
-                    entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
-
-                    # Calculate toll fare for variable routes
-                    toll_fare = "-"
-                    route_key = tuple(sorted([entry_plaza, toll_plaza]))
-                    if route_key in variable_toll_rates:
-                        toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
-
-                # Fixed toll fare for Gombak Toll Plaza (Entry Only)
-                if toll_plaza == "Gombak Toll Plaza" and mode == "Entry Only":
                     toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
+                else:
+                    if recognized_text not in st.session_state['vehicle_entries']:
+                        mode = "Entry"
+                        st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
+                        toll_fare = "-"
+                    else:
+                        mode = "Exit" if st.session_state['vehicle_entries'][recognized_text]["plaza"] != toll_plaza else "Entry"
+                        if mode == "Exit":
+                            entry_data = st.session_state['vehicle_entries'].pop(recognized_text)
+                            entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
+
+                            # Calculate toll fare for variable routes
+                            toll_fare = "-"
+                            route_key = tuple(sorted([entry_plaza, toll_plaza]))
+                            if route_key in variable_toll_rates:
+                                toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
 
                 # Append to temporary results storage
                 new_results.append(
