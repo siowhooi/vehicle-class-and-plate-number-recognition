@@ -64,13 +64,6 @@ vehicle_classes = {
     "class5_bus": "Class 5",
 }
 
-# Initialize YOLO model
-try:
-    model = YOLO(r"best.pt")  # Ensure the model path is correct
-except Exception as e:
-    st.error(f"Error loading model: {e}")
-    st.stop()  # Stop execution if model loading fails
-
 # Define toll plaza selection and image upload
 with col1:
     st.subheader("Detection")
@@ -87,10 +80,18 @@ with col1:
 
 # Process uploaded image
 if uploaded_image is not None:
+    # Check if the model file exists and load it
+    try:
+        model = YOLO(r"best.pt")  # Ensure the model path is correct
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.stop()  # Stop execution if model loading fails
+
+    # Read and decode the uploaded image
     image_data = uploaded_image.read()
     image = np.frombuffer(image_data, dtype=np.uint8)
     image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-
+    
     if image is None:
         st.error("Failed to decode image. Please try again with a valid image.")
     else:
@@ -178,4 +179,3 @@ if uploaded_image is not None:
                     st.write("No data available yet.")
         except Exception as e:
             st.error(f"Error during inference: {e}")
-
