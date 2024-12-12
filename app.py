@@ -15,6 +15,10 @@ col1, col2 = st.columns(2)
 if 'vehicle_entries' not in st.session_state:
     st.session_state['vehicle_entries'] = {}
 
+# Initialize results_data in session state if not already present
+if 'results_data' not in st.session_state:
+    st.session_state['results_data'] = []
+
 # Define fixed toll rates for Gombak Toll Plaza
 fixed_toll_rates = {
     "Class 0": 0.00,
@@ -100,8 +104,8 @@ if uploaded_image is not None:
             # Initialize EasyOCR reader
             reader = easyocr.Reader(['en'])
 
-            # Initialize results storage
-            results_data = []
+            # Initialize temporary storage for new results
+            new_results = []
 
             # Process YOLO detections
             for box in results[0].boxes:
@@ -145,8 +149,8 @@ if uploaded_image is not None:
                 if toll_plaza == "Gombak Toll Plaza" and mode == "Entry":
                     toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
 
-                # Append to results data
-                results_data.append(
+                # Append to temporary results storage
+                new_results.append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
@@ -157,6 +161,9 @@ if uploaded_image is not None:
                     }
                 )
 
+            # Store new results to session state
+            st.session_state['results_data'].extend(new_results)
+
             # Display the image with YOLO detections (vehicles)
             with col1:
                 st.image(image_rgb, caption="Detected Vehicle",  use_container_width=True)
@@ -164,9 +171,3 @@ if uploaded_image is not None:
             # Display results in table format in col2
             with col2:
                 st.subheader("Results")
-                if results_data:
-                    st.table(results_data)
-                else:
-                    st.write("No vehicles or license plates detected.")
-        except Exception as e:
-            st.error(f"Error during inference: {e}")
