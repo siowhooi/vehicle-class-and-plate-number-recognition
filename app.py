@@ -80,18 +80,12 @@ with col1:
 
 # Process uploaded image
 if uploaded_image is not None:
-    # Check if the model file exists and load it
-    try:
-        model = YOLO(r"best.pt")  # Ensure the model path is correct
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-        st.stop()  # Stop execution if model loading fails
-
-    # Read and decode the uploaded image
+    # Check if the uploaded image has already been processed
+    existing_images = [result["Plate Number"] for result in st.session_state['results_data']]
     image_data = uploaded_image.read()
     image = np.frombuffer(image_data, dtype=np.uint8)
     image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-    
+
     if image is None:
         st.error("Failed to decode image. Please try again with a valid image.")
     else:
@@ -124,6 +118,10 @@ if uploaded_image is not None:
                 plate_image = image_rgb[y1:y2, x1:x2]
                 plate_text = reader.readtext(plate_image, detail=0)
                 recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
+
+                # Skip processing if plate is already handled
+                if recognized_text in existing_images:
+                    continue
 
                 # Determine mode and compute toll fare
                 if recognized_text not in st.session_state['vehicle_entries']:
