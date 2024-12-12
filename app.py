@@ -5,7 +5,7 @@ from ultralytics import YOLO
 import numpy as np
 from datetime import datetime
 
-# Streamlit Title
+# Title
 st.title("Vehicle and License Plate Recognition")
 
 # Create a left and right layout
@@ -14,9 +14,6 @@ col1, col2 = st.columns(2)
 # Initialize a dictionary to track vehicle entry and exit
 if 'vehicle_entries' not in st.session_state:
     st.session_state['vehicle_entries'] = {}
-
-if 'results_data' not in st.session_state:
-    st.session_state['results_data'] = []
 
 # Define fixed toll rates for Gombak Toll Plaza
 fixed_toll_rates = {
@@ -79,15 +76,11 @@ with col1:
 
     uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-    # Remove the uploaded image when switching locations
-    if uploaded_image is None and 'image' in st.session_state:
-        del st.session_state['image']
-
     # Process uploaded image
     if uploaded_image is not None:
         # Check if the model file exists and load it
         try:
-            model = YOLO(r"best.pt")  # Ensure the model path is correct
+            model = YOLO(r"best.pt") 
         except Exception as e:
             st.error(f"Error loading model: {e}")
             st.stop()  # Stop execution if model loading fails
@@ -101,7 +94,6 @@ with col1:
             st.error("Failed to decode image. Please try again with a valid image.")
         else:
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            st.session_state['image'] = image_rgb
 
         try:
             # Run YOLO inference
@@ -109,6 +101,9 @@ with col1:
 
             # Initialize EasyOCR reader
             reader = easyocr.Reader(['en'])
+
+            # Initialize results storage
+            results_data = []
 
             # Process YOLO detections
             for box in results[0].boxes:
@@ -153,7 +148,7 @@ with col1:
                     toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
 
                 # Append to results data
-                st.session_state['results_data'].append(
+                results_data.append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
@@ -164,16 +159,14 @@ with col1:
                     }
                 )
 
-            # Display the image with YOLO detections (vehicles)
-            st.image(image_rgb, caption="Detected Vehicle", use_column_width=True)
-
-        except Exception as e:
-            st.error(f"Error during inference: {e}")
+# Display the image with YOLO detections (vehicles) 
+with col1:
+    st.image(image_rgb, caption="Detected Vehicle", use_column_width=True)
 
 # Display results in table format in col2
 with col2:
     st.subheader("Results")
-    if st.session_state['results_data']:
-        st.table(st.session_state['results_data'])
+    if results_data:
+        st.table(results_data)
     else:
         st.write("No vehicles or license plates detected.")
