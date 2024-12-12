@@ -64,6 +64,13 @@ vehicle_classes = {
     "class5_bus": "Class 5",
 }
 
+# Initialize YOLO model
+try:
+    model = YOLO(r"best.pt")  # Ensure the model path is correct
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    st.stop()  # Stop execution if model loading fails
+
 # Define toll plaza selection and image upload
 with col1:
     st.subheader("Detection")
