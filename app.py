@@ -127,23 +127,18 @@ if uploaded_image is not None:
 
                 # Determine mode and compute toll fare
                 if recognized_text not in st.session_state['vehicle_entries']:
-                    mode = "Entry"
+                    mode = "Entry Only"
                     st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
                     toll_fare = "-"
                 else:
-                    mode = "Entry Only" if toll_plaza == "Gombak Toll Plaza" else "Exit"
-                    if mode == "Exit":
-                        entry_data = st.session_state['vehicle_entries'].pop(recognized_text)
-                        entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
+                    entry_data = st.session_state['vehicle_entries'][recognized_text]
+                    entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
 
-                        # Calculate toll fare for variable routes
-                        toll_fare = "-"
-                        route_key = tuple(sorted([entry_plaza, toll_plaza]))
-                        if route_key in variable_toll_rates:
-                            toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
-                    else:
-                        st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
-                        toll_fare = "-"
+                    # Calculate toll fare for variable routes
+                    toll_fare = "-"
+                    route_key = tuple(sorted([entry_plaza, toll_plaza]))
+                    if route_key in variable_toll_rates:
+                        toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
 
                 # Fixed toll fare for Gombak Toll Plaza (Entry Only)
                 if toll_plaza == "Gombak Toll Plaza" and mode == "Entry Only":
