@@ -5,7 +5,7 @@ from ultralytics import YOLO
 import numpy as np
 from datetime import datetime
 
-# Title
+# Streamlit Title
 st.title("Vehicle and License Plate Recognition")
 
 # Create a left and right layout
@@ -63,7 +63,6 @@ vehicle_classes = {
 # Define toll plaza selection and image upload
 with col1:
     st.subheader("Detection")
-
     toll_plaza = st.selectbox(
         "Select Toll Plaza",
         [
@@ -73,27 +72,26 @@ with col1:
             "Juru, Penang",
         ],
     )
-
     uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-    # Process uploaded image
-    if uploaded_image is not None:
-        # Check if the model file exists and load it
-        try:
-            model = YOLO(r"best.pt") 
-        except Exception as e:
-            st.error(f"Error loading model: {e}")
-            st.stop()  # Stop execution if model loading fails
+# Process uploaded image
+if uploaded_image is not None:
+    # Check if the model file exists and load it
+    try:
+        model = YOLO(r"best.pt")  # Ensure the model path is correct
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.stop()  # Stop execution if model loading fails
 
-        # Read and decode the uploaded image
-        image_data = uploaded_image.read()
-        image = np.frombuffer(image_data, dtype=np.uint8)
-        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-
-        if image is None:
-            st.error("Failed to decode image. Please try again with a valid image.")
-        else:
-            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # Read and decode the uploaded image
+    image_data = uploaded_image.read()
+    image = np.frombuffer(image_data, dtype=np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    
+    if image is None:
+        st.error("Failed to decode image. Please try again with a valid image.")
+    else:
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         try:
             # Run YOLO inference
@@ -159,16 +157,16 @@ with col1:
                     }
                 )
 
-# Display the image with YOLO detections (vehicles) 
-with col1:
-    st.image(image_rgb, caption="Detected Vehicle", use_column_width=True)
+            # Display the image with YOLO detections (vehicles)
+            with col1:
+                st.image(image_rgb, caption="Detected Vehicle", use_column_width=True)
 
-# Display results in table format in col2
-with col2:
-    st.subheader("Results")
-    if results_data:
-        st.table(results_data)
-    else:
-        st.write("No vehicles or license plates detected.")
-
-except Exception as e: st.error(f"Error during inference: {e}")
+            # Display results in table format in col2
+            with col2:
+                st.subheader("Results")
+                if results_data:
+                    st.table(results_data)
+                else:
+                    st.write("No vehicles or license plates detected.")
+        except Exception as e:
+            st.error(f"Error during inference: {e}")
