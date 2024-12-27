@@ -105,7 +105,8 @@ if uploaded_image is not None:
 
             # Display the extracted plate image for OCR recognition
             with col2:          
-                st.image(plate_image, caption="Extracted Plate Image for OCR", use_container_width=True)
+                st.image(image_rgb, caption="Extracted Plate Image for OCR", use_container_width=True)
+            
 
             # Display results in table format
             with col2:
