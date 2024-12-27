@@ -114,9 +114,8 @@ if uploaded_image is not None:
                 st.subheader("Results")
 
                 # Display persistent results from session state
-                if st.session_state['results_data']:
-                    st.table(st.session_state['results_data'])
-                else:
-                    st.write("No data available yet.")
+                results_df = pd.DataFrame(st.session_state['results_data'])
+                st.table(results_df)
+
         except Exception as e:
             st.error(f"Error during inference: {e}")
