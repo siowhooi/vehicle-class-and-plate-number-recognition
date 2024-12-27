@@ -102,7 +102,6 @@ if uploaded_image is not None:
                 if len(st.session_state['results_data']) > 0:
                     latest_plate_data = st.session_state['results_data'][-1]
                     cropped_plate_image = image.copy()
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
                     cv2.rectangle(cropped_plate_image, 
                                   (x1, y1), 
                                   (x2, y2), 
