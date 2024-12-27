@@ -61,9 +61,6 @@ if uploaded_image is not None:
             # Initialize EasyOCR reader
             reader = easyocr.Reader(['en'])
 
-            # Initialize temporary storage for new results
-            new_results = []
-
             # Process YOLO detections
             for box in results[0].boxes:
                 class_id = int(box.cls)
@@ -82,27 +79,24 @@ if uploaded_image is not None:
                 plate_text = reader.readtext(plate_image, detail=0)
                 recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
-                
-                       
-                      
+                # Draw bounding box on the image
+                cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Blue bounding box
 
-                          
-                # Append to temporary results storage
-                new_results.append(
+                # Annotate plate number below the vehicle
+                cv2.putText(image_rgb, recognized_text, (x1, y2 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+                # Append to results storage
+                st.session_state['results_data'].append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
                         "Plate Number": recognized_text,
-                     
                     }
                 )
 
-            # Store new results to session state
-            st.session_state['results_data'].extend(new_results)
-
-            # Display the image with YOLO detections (vehicles)
+            # Display the image with YOLO detections (vehicles) and bounding boxes
             with col1:
-                st.image(image_rgb, caption="Detected Vehicle", use_container_width=True)
+                st.image(image_rgb, caption="Detected Vehicle with Bounding Box and Plate Number", use_container_width=True)
 
             # Display results in table format in col2
             with col2:
