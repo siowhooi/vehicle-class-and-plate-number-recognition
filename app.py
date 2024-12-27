@@ -105,7 +105,10 @@ if uploaded_image is not None:
 
             # Display the extracted plate image for OCR recognition
             with col2:          
-                st.image(image_rgb, caption="Extracted Plate Image for OCR", use_container_width=True)
+                if 'plate_image' in locals():
+                    st.image(plate_image, caption="Extracted Plate Image for OCR", use_container_width=True)
+                else:
+                    st.write("No plate image detected.")
             
 
             # Display results in table format
