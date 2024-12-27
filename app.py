@@ -95,7 +95,16 @@ if uploaded_image is not None:
             with col1:
                 st.image(image_rgb, caption="Detected Vehicle with Bounding Box", use_container_width=True)
 
-            # Display results in table format in col2
+            # Display the image with OCR detections (license plates)
+            with col2:
+                plate_image_rgb = image.copy()
+                for box in results[0].boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    cv2.rectangle(plate_image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green bounding box for plate number
+
+                st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Plate Numbers", use_container_width=True)
+
+            # Display results in table format
             with col2:
                 st.subheader("Results")
 
