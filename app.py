@@ -84,7 +84,7 @@ if uploaded_image is not None:
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
-                        "Plate Number": ' '.join(recognized_text),  # Combine recognized text
+                        "Plate Number": recognized_text,  # Directly assigning recognized_text
                     }
                 )
 
