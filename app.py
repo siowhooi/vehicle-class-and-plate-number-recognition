@@ -100,9 +100,9 @@ if uploaded_image is not None:
                     cv2.rectangle(plate_image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green bounding box for plate number
 
                 st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Plate Numbers", use_container_width=True)
-          # Display only the extracted plate image in col2
-            with col2:
-                st.image(plate_image, channels="BGR", use_column_width=True)
+          # Display the extracted plate image for OCR recognition
+            with col2:          
+                st.image(plate_image, caption="Extracted Plate Image for OCR", use_container_width=True)
             
 
             # Display results in table format
