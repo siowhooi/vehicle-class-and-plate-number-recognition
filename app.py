@@ -75,7 +75,12 @@ if uploaded_image is not None:
                 # Crop the plate image
                 if class_name == "license_plate":  # Assuming 'license_plate' is the label for plates
                     plate_image = image_rgb[y1:y2, x1:x2]
-                    recognized_text = reader.readtext(plate_image, detail=0)
+
+                    # Preprocessing for better OCR results
+                    gray_plate = cv2.cvtColor(plate_image, cv2.COLOR_RGB2GRAY)
+                    _, thresh_plate = cv2.threshold(gray_plate, 150, 255, cv2.THRESH_BINARY_INV)
+
+                    recognized_text = reader.readtext(thresh_plate, detail=0)
                     recognized_text = ' '.join(recognized_text)
                 else:
                     recognized_text = "Not Detected"
@@ -105,7 +110,10 @@ if uploaded_image is not None:
                     if class_name == "license_plate":
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         plate_image = image_rgb[y1:y2, x1:x2]
-                        st.image(plate_image, caption="Detected License Plate", use_container_width=True)
+                        # Display the preprocessed image
+                        gray_plate = cv2.cvtColor(plate_image, cv2.COLOR_RGB2GRAY)
+                        _, thresh_plate = cv2.threshold(gray_plate, 150, 255, cv2.THRESH_BINARY_INV)
+                        st.image(thresh_plate, caption="Detected License Plate (Preprocessed)", use_container_width=True)
 
             # Display results in table format
             with col2:
