@@ -74,23 +74,17 @@ if uploaded_image is not None:
                 # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
 
-                # License plate recognition (crop the vehicle's plate)
+                # If the class is 'license_plate', recognize the plate number
                 if class_name == 'license_plate':
-                    plate_image = image_rgb[y1:y2, x1:x2]
-                    plate_text = reader.readtext(plate_image, detail=0)
-                    recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
-
-                    # Draw bounding box on the image for plate
-                    cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green bounding box for plate number
-                else:
-                    recognized_text = "N/A"
+                    cropped_plate = image[y1:y2, x1:x2]
+                    recognized_text = reader.readtext(cropped_plate, detail=0)
 
                 # Append to results storage
                 st.session_state['results_data'].append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
-                        "Plate Number": recognized_text,
+                        "Plate Number": ' '.join(recognized_text),  # Combine recognized text
                     }
                 )
 
@@ -103,13 +97,17 @@ if uploaded_image is not None:
 
                 st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Plate Numbers", use_container_width=True)
 
-            # Display the extracted plate image for OCR recognition
+            # Display the cropped plate image 
             with col2:          
-                if 'plate_image' in locals():
-                    st.image(plate_image, caption="Extracted Plate Image for OCR", use_container_width=True)
-                else:
-                    st.write("No plate image detected.")
-            
+                if len(st.session_state['results_data']) > 0:
+                    latest_plate_data = st.session_state['results_data'][-1]
+                    cropped_plate_image = image.copy()
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    cv2.rectangle(cropped_plate_image, 
+                                  (x1, y1), 
+                                  (x2, y2), 
+                                  (0, 255, 0), 2)  # Green bounding box
+                    st.image(cv2.cvtColor(cropped_plate_image, cv2.COLOR_BGR2RGB), caption="Cropped Plate", use_container_width=True)
 
             # Display results in table format
             with col2:
