@@ -31,7 +31,6 @@ vehicle_classes = {
 
 # Define image upload
 with col1:
-    st.subheader("Detection")
     uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 # Process uploaded image
@@ -73,10 +72,13 @@ if uploaded_image is not None:
                 # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
 
-                # Crop plate image and recognize text using OCR
-                cropped_plate = image_rgb[y1:y2, x1:x2]
-                ocr_results = reader.readtext(cropped_plate)
-                recognized_text = " ".join([text[1] for text in ocr_results]) if ocr_results else "N/A"
+                # Crop the plate image
+                if class_name == "license_plate":  # Assuming 'license_plate' is the label for plates
+                    plate_image = image_rgb[y1:y2, x1:x2]
+                    recognized_text = reader.readtext(plate_image, detail=0)
+                    recognized_text = ' '.join(recognized_text)
+                else:
+                    recognized_text = "N/A"
 
                 # Append to results storage
                 st.session_state['results_data'].append(
@@ -95,6 +97,15 @@ if uploaded_image is not None:
                     cv2.rectangle(plate_image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
                 st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Vehicle", use_container_width=True)
+
+            # Display the cropped plate image from YOLO model
+            with col2:
+                for box in results[0].boxes:
+                    class_name = model.names[int(box.cls)]
+                    if class_name == "license_plate":
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        plate_image = image_rgb[y1:y2, x1:x2]
+                        st.image(plate_image, caption="Cropped Plate Image", use_container_width=True)
 
             # Display results in table format
             with col2:
