@@ -74,40 +74,34 @@ if uploaded_image is not None:
                 # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
 
-                # If the class is 'license_plate', recognize the plate number
-                recognized_text = []  # Initialize empty list
-                if class_name == 'license_plate':
-                    cropped_plate = image[y1:y2, x1:x2]
-                    recognized_text = reader.readtext(cropped_plate, detail=0)
+                # Crop the plate image to recognize the plate number using OCR
+                plate_image = image[y1:y2, x1:x2]
+                plate_image_rgb = cv2.cvtColor(plate_image, cv2.COLOR_BGR2RGB)
+                recognized_text = reader.readtext(plate_image_rgb, detail=0)
+                recognized_text = " ".join(recognized_text) if recognized_text else "N/A"
 
                 # Append to results storage
                 st.session_state['results_data'].append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
-                        "Plate Number": ' '.join(recognized_text),  # Combine recognized text
+                        "Plate Number": recognized_text,
                     }
                 )
 
             # Display the image with YOLO detections (vehicles) 
             with col1:
-                plate_image_rgb = image.copy()
+                detection_image = image.copy()
                 for box in results[0].boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    cv2.rectangle(plate_image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green bounding box for plate number
+                    cv2.rectangle(detection_image, (x1, y1), (x2, y2), (0, 255, 0), 2)  
 
-                st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Plate Numbers", use_container_width=True)
+                st.image(cv2.cvtColor(detection_image, cv2.COLOR_BGR2RGB), caption="Detected Vehicle", use_container_width=True)
 
-            # Display the cropped plate image 
+            # Display the cropped plate image from YOLO model
             with col2:          
-                if len(st.session_state['results_data']) > 0:
-                    latest_plate_data = st.session_state['results_data'][-1]
-                    cropped_plate_image = image.copy()
-                    cv2.rectangle(cropped_plate_image, 
-                                  (x1, y1), 
-                                  (x2, y2), 
-                                  (0, 255, 0), 2)  # Green bounding box
-                    st.image(cv2.cvtColor(cropped_plate_image, cv2.COLOR_BGR2RGB), caption="Cropped Plate", use_container_width=True)
+                if plate_image is not None:
+                    st.image(plate_image_rgb, caption="Cropped Plate Image", use_container_width=True)
 
             # Display results in table format
             with col2:
