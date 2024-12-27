@@ -73,7 +73,8 @@ if uploaded_image is not None:
                 vehicle_class = vehicle_classes[class_name]
 
                 # Crop the plate image
-                if class_name == "license_plate":  # Assuming 'license_plate' is the label for plates
+                if class_name == "license_plate":
+                    # Run OCR here
                     plate_image = image_rgb[y1:y2, x1:x2]
                     recognized_text = reader.readtext(plate_image, detail=0)
                     recognized_text = ' '.join(recognized_text)
@@ -120,3 +121,4 @@ if uploaded_image is not None:
                     st.write("No data available yet.")
         except Exception as e:
             st.error(f"Error during inference: {e}")
+
