@@ -81,11 +81,16 @@ if uploaded_image is not None:
                     recognized_text = "Not Detected"
 
                 # Append to results storage
+                if recognized_text == "Not Detected":
+                    plate_info = f"{vehicle_class} {recognized_text}"
+                else:
+                    plate_info = f"{vehicle_class} {recognized_text}"
+
                 st.session_state['results_data'].append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
-                        "Plate Number": recognized_text,
+                        "Plate Number": plate_info,
                     }
                 )
 
@@ -114,8 +119,9 @@ if uploaded_image is not None:
                 st.subheader("Results")
 
                 # Display persistent results from session state
-                results_df = pd.DataFrame(st.session_state['results_data'])
-                st.table(results_df)
-
+                if st.session_state['results_data']:
+                    st.table(st.session_state['results_data'])
+                else:
+                    st.write("No data available yet.")
         except Exception as e:
             st.error(f"Error during inference: {e}")
