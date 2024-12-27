@@ -6,7 +6,7 @@ import numpy as np
 from datetime import datetime
 
 # Streamlit Title
-st.title("Vehicle and License Plate Recognition")
+st.title("Vehicle Classification and Plate Number Recognition")
 
 # Create a left and right layout
 col1, col2 = st.columns(2)
@@ -19,41 +19,6 @@ if 'vehicle_entries' not in st.session_state:
 if 'results_data' not in st.session_state:
     st.session_state['results_data'] = []
 
-# Define fixed toll rates for Gombak Toll Plaza
-fixed_toll_rates = {
-    "Class 0": 0.00,
-    "Class 1": 6.00,
-    "Class 2": 12.00,
-    "Class 3": 18.00,
-    "Class 4": 3.00,
-    "Class 5": 5.00,
-}
-
-# Define variable toll rates for other routes
-variable_toll_rates = {
-    ("Jalan Duta, Kuala Lumpur", "Juru, Penang"): {
-        "Class 1": 35.51,
-        "Class 2": 64.90,
-        "Class 3": 86.50,
-        "Class 4": 17.71,
-        "Class 5": 21.15,
-    },
-    ("Seremban, Negeri Sembilan", "Jalan Duta, Kuala Lumpur"): {
-        "Class 1": 10.58,
-        "Class 2": 19.50,
-        "Class 3": 29.50,
-        "Class 4": 5.33,
-        "Class 5": 7.95,
-    },
-    ("Seremban, Negeri Sembilan", "Juru, Penang"): {
-        "Class 1": 43.95,
-        "Class 2": 80.50,
-        "Class 3": 107.20,
-        "Class 4": 22.06,
-        "Class 5": 30.95,
-    },
-}
-
 # Vehicle classes
 vehicle_classes = {
     "class0_emergencyVehicle": "Class 0",
@@ -64,18 +29,10 @@ vehicle_classes = {
     "class5_bus": "Class 5",
 }
 
-# Define toll plaza selection and image upload
+# Define image upload
 with col1:
     st.subheader("Detection")
-    toll_plaza = st.selectbox(
-        "Select Toll Plaza",
-        [
-            "Gombak Toll Plaza",
-            "Jalan Duta, Kuala Lumpur",
-            "Seremban, Negeri Sembilan",
-            "Juru, Penang",
-        ],
-    )
+  
     uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 # Process uploaded image
@@ -125,36 +82,18 @@ if uploaded_image is not None:
                 plate_text = reader.readtext(plate_image, detail=0)
                 recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
-                # Determine mode and compute toll fare
-                if toll_plaza == "Gombak Toll Plaza":
-                    mode = "Entry Only"
-                    toll_fare = fixed_toll_rates.get(vehicle_class, 0.00)
-                else:
-                    if recognized_text not in st.session_state['vehicle_entries']:
-                        mode = "Entry"
-                        st.session_state['vehicle_entries'][recognized_text] = {"plaza": toll_plaza, "class": vehicle_class}
-                        toll_fare = "-"
-                    else:
-                        mode = "Exit" if st.session_state['vehicle_entries'][recognized_text]["plaza"] != toll_plaza else "Entry"
-                        if mode == "Exit":
-                            entry_data = st.session_state['vehicle_entries'].pop(recognized_text)
-                            entry_plaza, entry_class = entry_data["plaza"], entry_data["class"]
+                
+                       
+                      
 
-                            # Calculate toll fare for variable routes
-                            toll_fare = "-"
-                            route_key = tuple(sorted([entry_plaza, toll_plaza]))
-                            if route_key in variable_toll_rates:
-                                toll_fare = variable_toll_rates[route_key].get(entry_class, 0.00)
-
+                          
                 # Append to temporary results storage
                 new_results.append(
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
                         "Plate Number": recognized_text,
-                        "Toll": toll_plaza,
-                        "Mode": mode,
-                        "Toll Fare (RM)": f"{toll_fare:.2f}" if toll_fare != "-" else "-",
+                     
                     }
                 )
 
