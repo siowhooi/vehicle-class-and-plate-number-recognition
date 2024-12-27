@@ -82,9 +82,6 @@ if uploaded_image is not None:
                 # Draw bounding box on the image
                 cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Blue bounding box
 
-                # Annotate plate number below the vehicle
-                cv2.putText(image_rgb, recognized_text, (x1, y2 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-
                 # Append to results storage
                 st.session_state['results_data'].append(
                     {
@@ -96,7 +93,7 @@ if uploaded_image is not None:
 
             # Display the image with YOLO detections (vehicles) and bounding boxes
             with col1:
-                st.image(image_rgb, caption="Detected Vehicle with Bounding Box and Plate Number", use_container_width=True)
+                st.image(image_rgb, caption="Detected Vehicle with Bounding Box", use_container_width=True)
 
             # Display results in table format in col2
             with col2:
