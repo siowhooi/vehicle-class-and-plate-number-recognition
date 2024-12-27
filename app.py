@@ -78,7 +78,7 @@ if uploaded_image is not None:
                     recognized_text = reader.readtext(plate_image, detail=0)
                     recognized_text = ' '.join(recognized_text)
                 else:
-                    recognized_text = "N/A"
+                    recognized_text = "Not Detected"
 
                 # Append to results storage
                 st.session_state['results_data'].append(
