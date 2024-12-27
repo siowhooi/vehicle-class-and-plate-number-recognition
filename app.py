@@ -72,12 +72,13 @@ if uploaded_image is not None:
                 # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
 
-                # Crop the plate image
-                if class_name == "license_plate":
-                    # Run OCR here
-                    plate_image = image_rgb[y1:y2, x1:x2]
-                    recognized_text = reader.readtext(plate_image, detail=0)
-                    recognized_text = ' '.join(recognized_text)
+                for box in results[0].boxes:
+                    class_name = model.names[int(box.cls)]
+                    if class_name == "license_plate":
+                        x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        plate_image = image_rgb[y1:y2, x1:x2]
+                        recognized_text = reader.readtext(plate_image, detail=0)
+                        recognized_text = ' '.join(recognized_text)
                 else:
                     recognized_text = "Not Detected"
 
