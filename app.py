@@ -75,12 +75,17 @@ if uploaded_image is not None:
                 vehicle_class = vehicle_classes[class_name]
 
                 # License plate recognition (crop the vehicle's plate)
-                plate_image = image_rgb[y1:y2, x1:x2]
-                plate_text = reader.readtext(plate_image, detail=0)
-                recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
+                if class_name == 'license_plate':
+                    plate_image = image_rgb[y1:y2, x1:x2]
+                    plate_text = reader.readtext(plate_image, detail=0)
+                    recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
-                # Draw bounding box on the image
-                cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (255, 0, 0), 2)  # Blue bounding box
+                    # Draw bounding box on the image for plate
+                    cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green bounding box for plate number
+                else:
+                    recognized_text = "N/A"
+
+    
 
                 # Append to results storage
                 st.session_state['results_data'].append(
