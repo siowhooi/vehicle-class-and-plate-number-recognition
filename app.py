@@ -105,7 +105,7 @@ if uploaded_image is not None:
                     if class_name == "license_plate":
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         plate_image = image_rgb[y1:y2, x1:x2]
-                        st.image(plate_image, caption="Cropped Plate Image", use_container_width=True)
+                        st.image(plate_image, caption="Detected License Plate", use_container_width=True)
 
             # Display results in table format
             with col2:
