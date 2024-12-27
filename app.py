@@ -75,6 +75,7 @@ if uploaded_image is not None:
                 vehicle_class = vehicle_classes[class_name]
 
                 # If the class is 'license_plate', recognize the plate number
+                recognized_text = []  # Initialize empty list
                 if class_name == 'license_plate':
                     cropped_plate = image[y1:y2, x1:x2]
                     recognized_text = reader.readtext(cropped_plate, detail=0)
@@ -84,7 +85,7 @@ if uploaded_image is not None:
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
-                        "Plate Number": recognized_text,  # Directly assigning recognized_text
+                        "Plate Number": ' '.join(recognized_text),  # Combine recognized text
                     }
                 )
 
