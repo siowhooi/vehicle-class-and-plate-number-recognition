@@ -75,17 +75,15 @@ if uploaded_image is not None:
                 vehicle_class = vehicle_classes[class_name]
 
                 # License plate recognition (crop the vehicle's plate)
-if class_name == 'license_plate':
-    plate_image = image_rgb[y1:y2, x1:x2]  # Corrected
-    plate_text = reader.readtext(plate_image, detail=0)
-    recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
+                if class_name == 'license_plate':
+                    plate_image = image_rgb[y1:y2, x1:x2]
+                    plate_text = reader.readtext(plate_image, detail=0)
+                    recognized_text = ''.join(plate_text).upper() if plate_text else "N/A"
 
-    # Draw bounding box on the image for plate
-    cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green bounding box for plate number
-else:
-    recognized_text = "N/A"
-
-    
+                    # Draw bounding box on the image for plate
+                    cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green bounding box for plate number
+                else:
+                    recognized_text = "N/A"
 
                 # Append to results storage
                 st.session_state['results_data'].append(
@@ -98,17 +96,16 @@ else:
 
             # Display the image with YOLO detections (vehicles) 
             with col1:
- 
                 plate_image_rgb = image.copy()
                 for box in results[0].boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     cv2.rectangle(plate_image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green bounding box for plate number
 
                 st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Plate Numbers", use_container_width=True)
-          # Display the extracted plate image for OCR recognition
+
+            # Display the extracted plate image for OCR recognition
             with col2:          
                 st.image(plate_image, caption="Extracted Plate Image for OCR", use_container_width=True)
-            
 
             # Display results in table format
             with col2:
