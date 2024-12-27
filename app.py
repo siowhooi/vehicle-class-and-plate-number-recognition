@@ -81,13 +81,14 @@ if uploaded_image is not None:
                     recognized_text = "Not Detected"
 
                 # Append to results storage
-                st.session_state['results_data'].append(
-                    {
-                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "Vehicle Class": vehicle_class,
-                        "Plate Number": recognized_text,
-                    }
-                )
+                if recognized_text:
+                    st.session_state['results_data'].append(
+                        {
+                            "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                            "Vehicle Class": vehicle_class,
+                            "Plate Number": recognized_text,
+                        }
+                    )
 
             # Display the image with YOLO detections (vehicles)
             with col1:
