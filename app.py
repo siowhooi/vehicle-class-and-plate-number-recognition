@@ -72,24 +72,6 @@ if uploaded_image is not None:
                 # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
 
-                for box in results[0].boxes:
-                    class_name = model.names[int(box.cls)]
-                    if class_name == "license_plate":
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        plate_image = image_rgb[y1:y2, x1:x2]
-                        recognized_text = reader.readtext(plate_image, detail=0)
-                        recognized_text = ' '.join(recognized_text)
-                else:
-                    recognized_text = "Not Detected"
-
-                # Append to results storage
-                st.session_state['results_data'].append(
-                    {
-                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "Vehicle Class": vehicle_class,
-                        "Plate Number": recognized_text,
-                    }
-                )
 
             # Display the image with YOLO detections (vehicles)
             with col1:
@@ -110,6 +92,15 @@ if uploaded_image is not None:
                         recognized_text = reader.readtext(plate_image, detail=0)
                         recognized_text = ' '.join(recognized_text)
                         st.image(plate_image, caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
+
+            # Append to results storage
+                st.session_state['results_data'].append(
+                    {
+                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Vehicle Class": vehicle_class,
+                        "Plate Number": recognized_text,
+                    }
+                )
 
             # Display results in table format
             with col2:
