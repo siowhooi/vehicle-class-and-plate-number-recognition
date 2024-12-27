@@ -81,14 +81,13 @@ if uploaded_image is not None:
                     recognized_text = "Not Detected"
 
                 # Append to results storage
-                if recognized_text:
-                    st.session_state['results_data'].append(
-                        {
-                            "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                            "Vehicle Class": vehicle_class,
-                            "Plate Number": recognized_text,
-                        }
-                    )
+                st.session_state['results_data'].append(
+                    {
+                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Vehicle Class": vehicle_class,
+                        "Plate Number": recognized_text,
+                    }
+                )
 
             # Display the image with YOLO detections (vehicles)
             with col1:
@@ -99,7 +98,7 @@ if uploaded_image is not None:
 
                 st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Vehicle", use_container_width=True)
 
-            # Display the cropped plate image from YOLO model
+            # Display the cropped plate image with recognized text
             with col2:
                 for box in results[0].boxes:
                     class_name = model.names[int(box.cls)]
