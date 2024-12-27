@@ -74,12 +74,9 @@ if uploaded_image is not None:
 
                 # Crop the plate image
                 if class_name == "license_plate":  # Assuming 'license_plate' is the label for plates
-                    
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
                     plate_image = image_rgb[y1:y2, x1:x2]
                     recognized_text = reader.readtext(plate_image, detail=0)
                     recognized_text = ' '.join(recognized_text)
-                    st.image(plate_image, caption=f"Detected License Plate: {vehicle_class} {recognized_text}", use_container_width=True)
                 else:
                     recognized_text = "Not Detected"
 
@@ -88,7 +85,7 @@ if uploaded_image is not None:
                     {
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle_class,
-                        "Plate Number": f"{vehicle_class} {recognized_text}" if recognized_text != "Not Detected" else recognized_text,
+                        "Plate Number": recognized_text,
                     }
                 )
 
@@ -101,7 +98,7 @@ if uploaded_image is not None:
 
                 st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Vehicle", use_container_width=True)
 
-            # Display cropped plate image with recognized text
+            # Display the cropped plate image with recognized text
             with col2:
                 for box in results[0].boxes:
                     class_name = model.names[int(box.cls)]
@@ -110,7 +107,7 @@ if uploaded_image is not None:
                         plate_image = image_rgb[y1:y2, x1:x2]
                         recognized_text = reader.readtext(plate_image, detail=0)
                         recognized_text = ' '.join(recognized_text)
-                        st.image(plate_image, caption=f"Detected License Plate: {vehicle_class} {recognized_text}", use_container_width=True)
+                        st.image(plate_image, caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
 
             # Display results in table format
             with col2:
