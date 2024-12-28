@@ -46,7 +46,7 @@ if uploaded_image is not None:
     image_data = uploaded_image.read()
     image = np.frombuffer(image_data, dtype=np.uint8)
     image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-    
+
     if image is None:
         st.error("Failed to decode image. Please try again with a valid image.")
     else:
@@ -58,6 +58,8 @@ if uploaded_image is not None:
 
             # Initialize EasyOCR reader
             reader = easyocr.Reader(['en'])
+
+            recognized_text = "Not Detected"  # Default value if no license plate is detected
 
             # Process YOLO detections
             for box in results[0].boxes:
@@ -72,6 +74,22 @@ if uploaded_image is not None:
                 # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
 
+                # Check for license plate and perform OCR
+                if class_name == "license_plate":
+                    plate_image = image_rgb[y1:y2, x1:x2]
+                    text_results = reader.readtext(plate_image, detail=0)
+                    if text_results:
+                        recognized_text = ' '.join(text_results)
+
+                # Append to results storage
+                st.session_state['results_data'].append(
+                    {
+                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Vehicle Class": vehicle_class,
+                        "Plate Number": recognized_text,
+                    }
+                )
+
             # Display the image with YOLO detections (vehicles)
             with col1:
                 plate_image_rgb = image.copy()
@@ -83,23 +101,11 @@ if uploaded_image is not None:
 
             # Display the cropped plate image with recognized text
             with col2:
-                for box in results[0].boxes:
-                    class_name = model.names[int(box.cls)]
-                    if class_name == "license_plate":
-                        x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        plate_image = image_rgb[y1:y2, x1:x2]
-                        recognized_text = reader.readtext(plate_image, detail=0)
-                        recognized_text = ' '.join(recognized_text) if recognized_text else "Not Detected"
-                        st.image(plate_image, caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
-
-            # Append to results storage
-                st.session_state['results_data'].append(
-                    {
-                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "Vehicle Class": vehicle_class,
-                        "Plate Number": recognized_text,
-                    }
-                )
+                st.subheader("License Plate Detection")
+                if recognized_text != "Not Detected":
+                    st.image(plate_image, caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
+                else:
+                    st.write("No license plate detected.")
 
             # Display results in table format
             with col2:
