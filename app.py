@@ -72,7 +72,6 @@ if uploaded_image is not None:
                 # Get vehicle class
                 vehicle_class = vehicle_classes[class_name]
 
-
             # Display the image with YOLO detections (vehicles)
             with col1:
                 plate_image_rgb = image.copy()
@@ -90,7 +89,7 @@ if uploaded_image is not None:
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         plate_image = image_rgb[y1:y2, x1:x2]
                         recognized_text = reader.readtext(plate_image, detail=0)
-                        recognized_text = ' '.join(recognized_text)
+                        recognized_text = ' '.join(recognized_text) if recognized_text else "Not Detected"
                         st.image(plate_image, caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
 
             # Append to results storage
