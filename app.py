@@ -35,8 +35,7 @@ with col1:
 
 # Initialize EasyOCR reader with custom allowed characters
 allowed_characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-reader = easyocr.Reader(['en'], user_network_directory=None, gpu=False, lang_list=['en'], 
-                        config={'char_list': list(allowed_characters)})
+reader = easyocr.Reader(['en'], gpu=False, lang_list=['en'], char_list=allowed_characters)
 
 # Process uploaded image
 if uploaded_image is not None:
