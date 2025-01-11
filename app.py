@@ -33,6 +33,11 @@ vehicle_classes = {
 with col1:
     uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
+# Initialize EasyOCR reader with custom allowed characters
+allowed_characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+reader = easyocr.Reader(['en'], user_network_directory=None, gpu=False, lang_list=['en'], 
+                        config={'char_list': list(allowed_characters)})
+
 # Process uploaded image
 if uploaded_image is not None:
     # Check if the model file exists and load it
@@ -55,10 +60,6 @@ if uploaded_image is not None:
         try:
             # Run YOLO inference
             results = model(image_rgb)  # Use the RGB image for inference
-
-            # Initialize EasyOCR reader with custom char_list for only numbers and alphabet
-            custom_char_list = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-            reader = easyocr.Reader(['en'], char_list=custom_char_list)
 
             # Separate vehicle and license plate detections
             vehicle_detections = []
@@ -97,10 +98,10 @@ if uploaded_image is not None:
                 plate_image = license_plate_detection["image"]
 
                 if plate_image.size > 0:
-                    # Perform OCR
+                    # Perform OCR with restricted character set
                     text_results = reader.readtext(plate_image, detail=0)
-                    recognized_text = ' '.join(text_results) if text_results else "Not Detected"
-
+                    # Join text results and filter out unwanted characters
+                    recognized_text = ''.join(text_results) if text_results else "Not Detected"
                 else:
                     recognized_text = "Not Detected"
 
