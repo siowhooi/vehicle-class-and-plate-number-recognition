@@ -29,6 +29,16 @@ vehicle_classes = {
     "class5_bus": "Class 5",
 }
 
+# Mapping for vehicle types
+vehicle_types = {
+    "Class 0": "Emergency Vehicle",
+    "Class 1": "Light Vehicle",
+    "Class 2": "Medium Vehicle",
+    "Class 3": "Heavy Vehicle",
+    "Class 4": "Taxi",
+    "Class 5": "Bus",
+}
+
 # Define image upload
 with col1:
     uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -118,20 +128,24 @@ if uploaded_image is not None:
                         min_distance = distance
                         matched_vehicle = vehicle
 
-                # Append matched results
+                # Append matched results with Vehicle Type
                 if matched_vehicle:
+                    vehicle_type = vehicle_types.get(matched_vehicle["class"], "Unknown")
                     st.session_state['results_data'].append({
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": matched_vehicle["class"],
+                        "Vehicle Type": vehicle_type,
                         "Plate Number": recognized_text,
                     })
 
             else:
                 # Append vehicles without plates
                 for vehicle in vehicle_detections:
+                    vehicle_type = vehicle_types.get(vehicle["class"], "Unknown")
                     st.session_state['results_data'].append({
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle["class"],
+                        "Vehicle Type": vehicle_type,
                         "Plate Number": "Not Detected",
                     })
 
