@@ -98,52 +98,43 @@ if uploaded_image is not None:
             kl_time = utc_time.astimezone(kl_timezone)
             formatted_kl_time = kl_time.strftime("%d/%m/%Y %H:%M")
 
-            # Debugging: Visualize License Plate Bounding Box for Taxi
-            if license_plate_detection:
-                st.write(f"License Plate BBox: {license_plate_detection['bbox']}")
-                st.image(license_plate_detection["image"], caption="Detected License Plate", use_container_width=True)
-
             # Match license plates with vehicle detections
             if license_plate_detection:
                 plate_image = license_plate_detection["image"]
-                
-                # Debug OCR on license plate
-                plate_image_gray = cv2.cvtColor(plate_image, cv2.COLOR_RGB2GRAY)
-                _, plate_image_thresh = cv2.threshold(plate_image_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                st.image(plate_image_thresh, caption="Thresholded Plate Image")
 
-                text_results = reader.readtext(plate_image_thresh, detail=0)
-                st.write(f"OCR Results: {text_results}")
-                recognized_text = ' '.join(text_results) if text_results else "Not Detected"
+                if plate_image.size > 0:
+                    # Perform OCR
+                    text_results = reader.readtext(plate_image, detail=0)
+                    recognized_text = ' '.join(text_results) if text_results else "Not Detected"
 
-            else:
-                recognized_text = "Not Detected"
+                else:
+                    recognized_text = "Not Detected"
 
-            # Match the license plate with the nearest vehicle detection
-            license_plate_bbox = license_plate_detection["bbox"] if license_plate_detection else None
-            matched_vehicle = None
-            min_distance = float('inf')
+                # Match the license plate with the nearest vehicle detection
+                license_plate_bbox = license_plate_detection["bbox"]
+                matched_vehicle = None
+                min_distance = float('inf')
 
-            for vehicle in vehicle_detections:
-                vehicle_bbox = vehicle["bbox"]
+                for vehicle in vehicle_detections:
+                    vehicle_bbox = vehicle["bbox"]
 
-                # Calculate distance between bounding boxes
-                vehicle_center = ((vehicle_bbox[0] + vehicle_bbox[2]) / 2, (vehicle_bbox[1] + vehicle_bbox[3]) / 2)
-                license_plate_center = ((license_plate_bbox[0] + license_plate_bbox[2]) / 2, (license_plate_bbox[1] + license_plate_bbox[3]) / 2)
-                distance = np.sqrt((vehicle_center[0] - license_plate_center[0])**2 + (vehicle_center[1] - license_plate_center[1])**2)
+                    # Calculate distance between bounding boxes
+                    vehicle_center = ((vehicle_bbox[0] + vehicle_bbox[2]) / 2, (vehicle_bbox[1] + vehicle_bbox[3]) / 2)
+                    license_plate_center = ((license_plate_bbox[0] + license_plate_bbox[2]) / 2, (license_plate_bbox[1] + license_plate_bbox[3]) / 2)
+                    distance = np.sqrt((vehicle_center[0] - license_plate_center[0])**2 + (vehicle_center[1] - license_plate_center[1])**2)
 
-                if distance < min_distance:
-                    min_distance = distance
-                    matched_vehicle = vehicle
+                    if distance < min_distance:
+                        min_distance = distance
+                        matched_vehicle = vehicle
 
-            # Append matched results
-            if matched_vehicle:
-                st.session_state['results_data'].append({
-                    "Datetime": formatted_kl_time,
-                    "Vehicle Class": matched_vehicle["class"],
-                    "Vehicle Type": matched_vehicle["vehicle_type"],
-                    "Plate Number": recognized_text,
-                })
+                # Append matched results
+                if matched_vehicle:
+                    st.session_state['results_data'].append({
+                        "Datetime": formatted_kl_time,
+                        "Vehicle Class": matched_vehicle["class"],
+                        "Vehicle Type": matched_vehicle["vehicle_type"],
+                        "Plate Number": recognized_text,
+                    })
 
             else:
                 # Append vehicles without plates
