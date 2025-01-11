@@ -19,24 +19,14 @@ if 'vehicle_entries' not in st.session_state:
 if 'results_data' not in st.session_state:
     st.session_state['results_data'] = []
 
-# Vehicle classes
+# Vehicle classes and their types
 vehicle_classes = {
-    "class0_emergencyVehicle": "Class 0",
-    "class1_lightVehicle": "Class 1",
-    "class2_mediumVehicle": "Class 2",
-    "class3_heavyVehicle": "Class 3",
-    "class4_taxi": "Class 4",
-    "class5_bus": "Class 5",
-}
-
-# Mapping for vehicle types
-vehicle_types = {
-    "Class 0": "Emergency Vehicle",
-    "Class 1": "Light Vehicle",
-    "Class 2": "Medium Vehicle",
-    "Class 3": "Heavy Vehicle",
-    "Class 4": "Taxi",
-    "Class 5": "Bus",
+    "class0_emergencyVehicle": ("Class 0", "Emergency Vehicle"),
+    "class1_lightVehicle": ("Class 1", "Light Vehicle"),
+    "class2_mediumVehicle": ("Class 2", "Medium Vehicle"),
+    "class3_heavyVehicle": ("Class 3", "Heavy Vehicle"),
+    "class4_taxi": ("Class 4", "Taxi"),
+    "class5_bus": ("Class 5", "Bus"),
 }
 
 # Define image upload
@@ -84,8 +74,10 @@ if uploaded_image is not None:
 
                 if class_name in vehicle_classes:
                     # Add vehicle detection
+                    vehicle_class, vehicle_type = vehicle_classes[class_name]
                     vehicle_detections.append({
-                        "class": vehicle_classes[class_name],
+                        "class": vehicle_class,
+                        "vehicle_type": vehicle_type,
                         "bbox": (x1, y1, x2, y2)
                     })
 
@@ -128,24 +120,22 @@ if uploaded_image is not None:
                         min_distance = distance
                         matched_vehicle = vehicle
 
-                # Append matched results with Vehicle Type
+                # Append matched results
                 if matched_vehicle:
-                    vehicle_type = vehicle_types.get(matched_vehicle["class"], "Unknown")
                     st.session_state['results_data'].append({
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": matched_vehicle["class"],
-                        "Vehicle Type": vehicle_type,
+                        "Vehicle Type": matched_vehicle["vehicle_type"],
                         "Plate Number": recognized_text,
                     })
 
             else:
                 # Append vehicles without plates
                 for vehicle in vehicle_detections:
-                    vehicle_type = vehicle_types.get(vehicle["class"], "Unknown")
                     st.session_state['results_data'].append({
                         "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
                         "Vehicle Class": vehicle["class"],
-                        "Vehicle Type": vehicle_type,
+                        "Vehicle Type": vehicle["vehicle_type"],
                         "Plate Number": "Not Detected",
                     })
 
