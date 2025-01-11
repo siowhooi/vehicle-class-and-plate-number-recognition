@@ -56,8 +56,9 @@ if uploaded_image is not None:
             # Run YOLO inference
             results = model(image_rgb)  # Use the RGB image for inference
 
-            # Initialize EasyOCR reader
-            reader = easyocr.Reader(['en'])
+            # Initialize EasyOCR reader with custom char_list for only numbers and alphabet
+            custom_char_list = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            reader = easyocr.Reader(['en'], char_list=custom_char_list)
 
             # Separate vehicle and license plate detections
             vehicle_detections = []
