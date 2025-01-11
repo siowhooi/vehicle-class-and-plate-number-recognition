@@ -12,10 +12,6 @@ st.title("Vehicle Classification and Plate Number Recognition")
 # Create a left and right layout
 col1, col2 = st.columns(2)
 
-# Initialize a dictionary to track vehicle entry and exit
-if 'vehicle_entries' not in st.session_state:
-    st.session_state['vehicle_entries'] = {}
-
 # Initialize results_data in session state if not already present
 if 'results_data' not in st.session_state:
     st.session_state['results_data'] = []
@@ -36,7 +32,6 @@ with col1:
 
 # Process uploaded image
 if uploaded_image is not None:
-    # Check if the model file exists and load it
     try:
         model = YOLO(r"best.pt")  # Ensure the model path is correct
     except Exception as e:
@@ -64,16 +59,13 @@ if uploaded_image is not None:
             vehicle_detections = []
             license_plate_detection = None
 
-            st.write("Detected Classes and Bounding Boxes:")
             for box in results[0].boxes:
                 class_id = int(box.cls)
                 class_name = model.names[class_id]
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                st.write(f"Class: {class_name}, BBox: {x1}, {y1}, {x2}, {y2}")
 
-                # Skip unrelated detections
-                if class_name not in vehicle_classes and class_name != "license_plate":
-                    continue
+                # Debugging
+                st.write(f"Class Detected: {class_name}, BBox: {x1}, {y1}, {x2}, {y2}")
 
                 if class_name in vehicle_classes:
                     # Add vehicle detection
@@ -89,98 +81,58 @@ if uploaded_image is not None:
                     h, w, _ = image_rgb.shape
                     x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
 
-                    # Debugging the license plate detection bounding box
+                    # Debugging license plate detection
                     st.write(f"License Plate BBox: {x1}, {y1}, {x2}, {y2}")
-
                     license_plate_detection = {
                         "bbox": (x1, y1, x2, y2),
                         "image": image_rgb[y1:y2, x1:x2]
                     }
 
-            # Get current time in Kuala Lumpur timezone
+            # Time Formatting
             kl_timezone = pytz.timezone('Asia/Kuala_Lumpur')
             utc_time = datetime.now(pytz.utc)
             kl_time = utc_time.astimezone(kl_timezone)
             formatted_kl_time = kl_time.strftime("%d/%m/%Y %H:%M")
 
-            # Match license plates with vehicle detections
+            # Handle License Plate OCR
             if license_plate_detection:
                 plate_image = license_plate_detection["image"]
+                
+                # Preprocess Plate Image (Optional, depending on OCR results)
+                plate_image_gray = cv2.cvtColor(plate_image, cv2.COLOR_RGB2GRAY)
+                _, plate_image_thresh = cv2.threshold(plate_image_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                st.image(plate_image_thresh, caption="Preprocessed Plate Image for OCR")
 
-                if plate_image.size > 0:
-                    # Preprocess license plate image for OCR
-                    plate_image_gray = cv2.cvtColor(plate_image, cv2.COLOR_RGB2GRAY)
-                    _, plate_image_thresh = cv2.threshold(plate_image_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-                    # Perform OCR on thresholded image
-                    text_results = reader.readtext(plate_image_thresh, detail=0)
-                    st.write(f"OCR Results: {text_results}")  # Show OCR results directly
-                    recognized_text = ' '.join(text_results) if text_results else "Not Detected"
-
-                else:
-                    recognized_text = "Not Detected"
-
-                # Match the license plate with the nearest vehicle detection
-                license_plate_bbox = license_plate_detection["bbox"]
-                matched_vehicle = None
-                min_distance = float('inf')
-
-                for vehicle in vehicle_detections:
-                    vehicle_bbox = vehicle["bbox"]
-
-                    # Calculate distance between bounding boxes
-                    vehicle_center = ((vehicle_bbox[0] + vehicle_bbox[2]) / 2, (vehicle_bbox[1] + vehicle_bbox[3]) / 2)
-                    license_plate_center = ((license_plate_bbox[0] + license_plate_bbox[2]) / 2, (license_plate_bbox[1] + license_plate_bbox[3]) / 2)
-                    distance = np.sqrt((vehicle_center[0] - license_plate_center[0])**2 + (vehicle_center[1] - license_plate_center[1])**2)
-
-                    if distance < min_distance:
-                        min_distance = distance
-                        matched_vehicle = vehicle
-
-                # Append matched results
-                if matched_vehicle:
-                    st.session_state['results_data'].append({
-                        "Datetime": formatted_kl_time,
-                        "Vehicle Class": matched_vehicle["class"],
-                        "Vehicle Type": matched_vehicle["vehicle_type"],
-                        "Plate Number": recognized_text,
-                    })
-
+                text_results = reader.readtext(plate_image_thresh, detail=0)
+                st.write(f"OCR Results: {text_results}")
+                recognized_text = ' '.join(text_results) if text_results else "Not Detected"
             else:
-                # Append vehicles without plates
-                for vehicle in vehicle_detections:
-                    st.session_state['results_data'].append({
-                        "Datetime": formatted_kl_time,
-                        "Vehicle Class": vehicle["class"],
-                        "Vehicle Type": vehicle["vehicle_type"],
-                        "Plate Number": "Not Detected",
-                    })
+                recognized_text = "Not Detected"
 
-            # Display the image with YOLO detections
+            # Process vehicle and plate association
+            for vehicle in vehicle_detections:
+                st.session_state['results_data'].append({
+                    "Datetime": formatted_kl_time,
+                    "Vehicle Class": vehicle["class"],
+                    "Vehicle Type": vehicle["vehicle_type"],
+                    "Plate Number": recognized_text,
+                })
+
+            # Display image with detected bounding boxes
             with col1:
                 plate_image_rgb = image.copy()
                 for box in results[0].boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     cv2.rectangle(plate_image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
                 st.image(cv2.cvtColor(plate_image_rgb, cv2.COLOR_BGR2RGB), caption="Detected Vehicle", use_container_width=True)
 
-            # Display the cropped plate image with recognized text
-            with col2:
-                st.subheader("License Plate Detection")
-                if license_plate_detection and recognized_text != "Not Detected":
-                    st.image(license_plate_detection["image"], caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
-                else:
-                    st.write("No license plate detected.")
-
-            # Display results in table format
+            # Results Table
             with col2:
                 st.subheader("Results")
-
-                # Display persistent results from session state
                 if st.session_state['results_data']:
                     st.table(st.session_state['results_data'])
                 else:
                     st.write("No data available yet.")
+
         except Exception as e:
             st.error(f"Error during inference: {e}")
