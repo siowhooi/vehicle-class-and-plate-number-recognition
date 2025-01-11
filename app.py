@@ -20,7 +20,7 @@ if 'vehicle_entries' not in st.session_state:
 if 'results_data' not in st.session_state:
     st.session_state['results_data'] = []
 
-# Vehicle classes
+# Vehicle classes and their types
 vehicle_classes = {
     "class0_emergencyVehicle": ("Class 0", "Emergency Vehicle"),
     "class1_lightVehicle": ("Class 1", "Light Vehicle"),
@@ -33,9 +33,6 @@ vehicle_classes = {
 # Define image upload
 with col1:
     uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-# KL timezone setup
-kl_tz = pytz.timezone('Asia/Kuala_Lumpur')
 
 # Process uploaded image
 if uploaded_image is not None:
@@ -86,36 +83,41 @@ if uploaded_image is not None:
                     })
 
                 elif class_name == "license_plate":
-                    # Ensure license plate detection is correctly handled
+                    # Save license plate detection
                     h, w, _ = image_rgb.shape
                     x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+
+                    # Debugging the license plate detection bounding box
+                    st.write(f"License Plate BBox: {x1}, {y1}, {x2}, {y2}")
 
                     license_plate_detection = {
                         "bbox": (x1, y1, x2, y2),
                         "image": image_rgb[y1:y2, x1:x2]
                     }
 
-            # Debugging: Add a print statement to inspect license plate detection
+            # Get current time in Kuala Lumpur timezone
+            kl_timezone = pytz.timezone('Asia/Kuala_Lumpur')
+            utc_time = datetime.now(pytz.utc)
+            kl_time = utc_time.astimezone(kl_timezone)
+            formatted_kl_time = kl_time.strftime("%d/%m/%Y %H:%M")
+
+            # Match license plates with vehicle detections
             if license_plate_detection:
                 plate_image = license_plate_detection["image"]
+
                 if plate_image.size > 0:
                     # Perform OCR
                     text_results = reader.readtext(plate_image, detail=0)
                     recognized_text = ' '.join(text_results) if text_results else "Not Detected"
-                    st.write("License Plate Detected: ", recognized_text)  # Debugging output
+
                 else:
                     recognized_text = "Not Detected"
-                    st.write("License plate image is empty or not found.")  # Debugging output
-            else:
-                recognized_text = "Not Detected"
-                st.write("No license plate detection found.")  # Debugging output
 
-            # Match the license plate with the nearest vehicle detection
-            license_plate_bbox = license_plate_detection["bbox"] if license_plate_detection else None
-            matched_vehicle = None
-            min_distance = float('inf')
+                # Match the license plate with the nearest vehicle detection
+                license_plate_bbox = license_plate_detection["bbox"]
+                matched_vehicle = None
+                min_distance = float('inf')
 
-            if license_plate_bbox:
                 for vehicle in vehicle_detections:
                     vehicle_bbox = vehicle["bbox"]
 
@@ -128,17 +130,14 @@ if uploaded_image is not None:
                         min_distance = distance
                         matched_vehicle = vehicle
 
-            # Get KL time and format it
-            formatted_kl_time = datetime.now(kl_tz).strftime("%d/%m/%Y %H:%M")
-
-            # Append matched results with license plate details
-            if matched_vehicle:
-                st.session_state['results_data'].append({
-                    "Datetime": formatted_kl_time,
-                    "Vehicle Class": matched_vehicle["class"],
-                    "Vehicle Type": matched_vehicle["vehicle_type"],
-                    "Plate Number": recognized_text,
-                })
+                # Append matched results
+                if matched_vehicle:
+                    st.session_state['results_data'].append({
+                        "Datetime": formatted_kl_time,
+                        "Vehicle Class": matched_vehicle["class"],
+                        "Vehicle Type": matched_vehicle["vehicle_type"],
+                        "Plate Number": recognized_text,
+                    })
 
             else:
                 # Append vehicles without plates
@@ -176,6 +175,5 @@ if uploaded_image is not None:
                     st.table(st.session_state['results_data'])
                 else:
                     st.write("No data available yet.")
-
         except Exception as e:
             st.error(f"Error during inference: {e}")
