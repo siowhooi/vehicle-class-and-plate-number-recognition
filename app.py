@@ -59,57 +59,83 @@ if uploaded_image is not None:
             # Initialize EasyOCR reader
             reader = easyocr.Reader(['en'])
 
-            recognized_text = "Not Detected"  # Default value if no license plate is detected
-            plate_image = None  # Initialize plate_image outside the loop
+            # Separate vehicle and license plate detections
+            vehicle_detections = []
+            license_plate_detection = None
 
-            # Debugging output
-            st.write("YOLO Results:", results)
-
-            # Process YOLO detections
             for box in results[0].boxes:
                 class_id = int(box.cls)
                 class_name = model.names[class_id]
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-                # Debugging: Print detection details
-                st.write(f"Detected Class: {class_name}, Coordinates: ({x1}, {y1}, {x2}, {y2})")
-
-                # Skip non-vehicle detections
+                # Skip unrelated detections
                 if class_name not in vehicle_classes and class_name != "license_plate":
                     continue
 
-                # Get vehicle class
-                vehicle_class = vehicle_classes.get(class_name, "Unknown Class")
+                if class_name in vehicle_classes:
+                    # Add vehicle detection
+                    vehicle_detections.append({
+                        "class": vehicle_classes[class_name],
+                        "bbox": (x1, y1, x2, y2)
+                    })
 
-                # Check for license plate and perform OCR
-                if class_name == "license_plate":
-                    # Ensure coordinates are within bounds
+                elif class_name == "license_plate":
+                    # Save license plate detection
                     h, w, _ = image_rgb.shape
                     x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
 
-                    plate_image = image_rgb[y1:y2, x1:x2]  # Save the cropped plate image
-
-                    if plate_image.size == 0:
-                        st.error("License plate image is empty after cropping!")
-                        continue
-
-                    text_results = reader.readtext(plate_image, detail=0)
-                    if text_results:
-                        recognized_text = ' '.join(text_results)
-                        st.write("OCR Result:", recognized_text)
-                    else:
-                        st.write("OCR failed to detect any text.")
-
-                # Append to results storage
-                st.session_state['results_data'].append(
-                    {
-                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "Vehicle Class": vehicle_class,
-                        "Plate Number": recognized_text,
+                    license_plate_detection = {
+                        "bbox": (x1, y1, x2, y2),
+                        "image": image_rgb[y1:y2, x1:x2]
                     }
-                )
 
-            # Display the image with YOLO detections (vehicles)
+            # Match license plates with vehicle detections
+            if license_plate_detection:
+                plate_image = license_plate_detection["image"]
+
+                if plate_image.size > 0:
+                    # Perform OCR
+                    text_results = reader.readtext(plate_image, detail=0)
+                    recognized_text = ' '.join(text_results) if text_results else "Not Detected"
+
+                else:
+                    recognized_text = "Not Detected"
+
+                # Match the license plate with the nearest vehicle detection
+                license_plate_bbox = license_plate_detection["bbox"]
+                matched_vehicle = None
+                min_distance = float('inf')
+
+                for vehicle in vehicle_detections:
+                    vehicle_bbox = vehicle["bbox"]
+
+                    # Calculate distance between bounding boxes
+                    vehicle_center = ((vehicle_bbox[0] + vehicle_bbox[2]) / 2, (vehicle_bbox[1] + vehicle_bbox[3]) / 2)
+                    license_plate_center = ((license_plate_bbox[0] + license_plate_bbox[2]) / 2, (license_plate_bbox[1] + license_plate_bbox[3]) / 2)
+                    distance = np.sqrt((vehicle_center[0] - license_plate_center[0])**2 + (vehicle_center[1] - license_plate_center[1])**2)
+
+                    if distance < min_distance:
+                        min_distance = distance
+                        matched_vehicle = vehicle
+
+                # Append matched results
+                if matched_vehicle:
+                    st.session_state['results_data'].append({
+                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Vehicle Class": matched_vehicle["class"],
+                        "Plate Number": recognized_text,
+                    })
+
+            else:
+                # Append vehicles without plates
+                for vehicle in vehicle_detections:
+                    st.session_state['results_data'].append({
+                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Vehicle Class": vehicle["class"],
+                        "Plate Number": "Not Detected",
+                    })
+
+            # Display the image with YOLO detections
             with col1:
                 plate_image_rgb = image.copy()
                 for box in results[0].boxes:
@@ -121,8 +147,8 @@ if uploaded_image is not None:
             # Display the cropped plate image with recognized text
             with col2:
                 st.subheader("License Plate Detection")
-                if plate_image is not None and recognized_text != "Not Detected":
-                    st.image(plate_image, caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
+                if license_plate_detection and recognized_text != "Not Detected":
+                    st.image(license_plate_detection["image"], caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
                 else:
                     st.write("No license plate detected.")
 
