@@ -4,6 +4,7 @@ import easyocr
 from ultralytics import YOLO
 import numpy as np
 from datetime import datetime
+import pytz
 
 # Streamlit Title
 st.title("Vehicle Classification and Plate Number Recognition")
@@ -91,6 +92,12 @@ if uploaded_image is not None:
                         "image": image_rgb[y1:y2, x1:x2]
                     }
 
+            # Get current time in Kuala Lumpur timezone
+            kl_timezone = pytz.timezone('Asia/Kuala_Lumpur')
+            utc_time = datetime.now(pytz.utc)
+            kl_time = utc_time.astimezone(kl_timezone)
+            formatted_kl_time = kl_time.strftime("%d/%m/%Y %H:%M")
+
             # Match license plates with vehicle detections
             if license_plate_detection:
                 plate_image = license_plate_detection["image"]
@@ -123,7 +130,7 @@ if uploaded_image is not None:
                 # Append matched results
                 if matched_vehicle:
                     st.session_state['results_data'].append({
-                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Datetime": formatted_kl_time,
                         "Vehicle Class": matched_vehicle["class"],
                         "Vehicle Type": matched_vehicle["vehicle_type"],
                         "Plate Number": recognized_text,
@@ -133,7 +140,7 @@ if uploaded_image is not None:
                 # Append vehicles without plates
                 for vehicle in vehicle_detections:
                     st.session_state['results_data'].append({
-                        "Datetime": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Datetime": formatted_kl_time,
                         "Vehicle Class": vehicle["class"],
                         "Vehicle Type": vehicle["vehicle_type"],
                         "Plate Number": "Not Detected",
