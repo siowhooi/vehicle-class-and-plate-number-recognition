@@ -9,6 +9,9 @@ import pytz
 # Streamlit Title
 st.title("Vehicle Classification and Plate Number Recognition")
 
+# Instructional text
+st.write("Upload a clear side-view image of a vehicle, including its tyres.")
+
 # Create a left and right layout
 col1, col2 = st.columns(2)
 
