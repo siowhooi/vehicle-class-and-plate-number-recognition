@@ -62,25 +62,43 @@ if uploaded_image is not None:
             recognized_text = "Not Detected"  # Default value if no license plate is detected
             plate_image = None  # Initialize plate_image outside the loop
 
+            # Debugging output
+            st.write("YOLO Results:", results)
+
             # Process YOLO detections
             for box in results[0].boxes:
                 class_id = int(box.cls)
                 class_name = model.names[class_id]
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
 
+                # Debugging: Print detection details
+                st.write(f"Detected Class: {class_name}, Coordinates: ({x1}, {y1}, {x2}, {y2})")
+
                 # Skip non-vehicle detections
-                if class_name not in vehicle_classes:
+                if class_name not in vehicle_classes and class_name != "license_plate":
                     continue
 
                 # Get vehicle class
-                vehicle_class = vehicle_classes[class_name]
+                vehicle_class = vehicle_classes.get(class_name, "Unknown Class")
 
                 # Check for license plate and perform OCR
                 if class_name == "license_plate":
+                    # Ensure coordinates are within bounds
+                    h, w, _ = image_rgb.shape
+                    x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+
                     plate_image = image_rgb[y1:y2, x1:x2]  # Save the cropped plate image
+
+                    if plate_image.size == 0:
+                        st.error("License plate image is empty after cropping!")
+                        continue
+
                     text_results = reader.readtext(plate_image, detail=0)
                     if text_results:
                         recognized_text = ' '.join(text_results)
+                        st.write("OCR Result:", recognized_text)
+                    else:
+                        st.write("OCR failed to detect any text.")
 
                 # Append to results storage
                 st.session_state['results_data'].append(
