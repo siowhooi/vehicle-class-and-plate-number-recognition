@@ -64,10 +64,12 @@ if uploaded_image is not None:
             vehicle_detections = []
             license_plate_detection = None
 
+            st.write("Detected Classes and Bounding Boxes:")
             for box in results[0].boxes:
                 class_id = int(box.cls)
                 class_name = model.names[class_id]
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
+                st.write(f"Class: {class_name}, BBox: {x1}, {y1}, {x2}, {y2}")
 
                 # Skip unrelated detections
                 if class_name not in vehicle_classes and class_name != "license_plate":
@@ -106,8 +108,13 @@ if uploaded_image is not None:
                 plate_image = license_plate_detection["image"]
 
                 if plate_image.size > 0:
-                    # Perform OCR
-                    text_results = reader.readtext(plate_image, detail=0)
+                    # Preprocess license plate image for OCR
+                    plate_image_gray = cv2.cvtColor(plate_image, cv2.COLOR_RGB2GRAY)
+                    _, plate_image_thresh = cv2.threshold(plate_image_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+                    # Perform OCR on thresholded image
+                    text_results = reader.readtext(plate_image_thresh, detail=0)
+                    st.write(f"OCR Results: {text_results}")  # Show OCR results directly
                     recognized_text = ' '.join(text_results) if text_results else "Not Detected"
 
                 else:
