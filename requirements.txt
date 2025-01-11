@@ -6,3 +6,4 @@ ultralytics
 matplotlib
 numpy
 torch
+pytz
