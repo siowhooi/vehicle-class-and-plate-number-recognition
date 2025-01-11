@@ -60,6 +60,7 @@ if uploaded_image is not None:
             reader = easyocr.Reader(['en'])
 
             recognized_text = "Not Detected"  # Default value if no license plate is detected
+            plate_image = None  # Initialize plate_image outside the loop
 
             # Process YOLO detections
             for box in results[0].boxes:
@@ -76,7 +77,7 @@ if uploaded_image is not None:
 
                 # Check for license plate and perform OCR
                 if class_name == "license_plate":
-                    plate_image = image_rgb[y1:y2, x1:x2]
+                    plate_image = image_rgb[y1:y2, x1:x2]  # Save the cropped plate image
                     text_results = reader.readtext(plate_image, detail=0)
                     if text_results:
                         recognized_text = ' '.join(text_results)
@@ -102,7 +103,7 @@ if uploaded_image is not None:
             # Display the cropped plate image with recognized text
             with col2:
                 st.subheader("License Plate Detection")
-                if recognized_text != "Not Detected":
+                if plate_image is not None and recognized_text != "Not Detected":
                     st.image(plate_image, caption=f"Detected License Plate: {recognized_text}", use_container_width=True)
                 else:
                     st.write("No license plate detected.")
