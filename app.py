@@ -73,7 +73,7 @@ if uploaded_image is not None:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
 
                 # Skip unrelated detections
-                if class_name not in vehicle_classes and class_name != "license_plate":
+                if class_name not in vehicle_classes and class_name not in ["license_plate", "license_plate_taxi"]:
                     continue
 
                 if class_name in vehicle_classes:
@@ -85,7 +85,7 @@ if uploaded_image is not None:
                         "bbox": (x1, y1, x2, y2)
                     })
 
-                elif class_name == "license_plate":
+                elif class_name in ["license_plate", "license_plate_taxi"]:
                     # Save license plate detection
                     h, w, _ = image_rgb.shape
                     x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
